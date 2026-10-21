@@ -24,8 +24,8 @@ function JarRig({ quality, lidAnchor }: { quality: "high" | "low"; lidAnchor: Re
     // on portrait screens keep the jar centred and a touch smaller
     const portrait = viewport.aspect < 0.9;
     const xK = portrait ? 0.12 : Math.min(1, viewport.aspect / 1.6);
-    const sK = portrait ? 0.78 : 1;
-    const yOff = portrait ? -0.55 : 0;
+    const sK = portrait ? 0.62 : 1;
+    const yOff = portrait ? -0.35 : 0;
 
     g.position.x = damp(g.position.x, jarState.x * xK + pointer.x * 0.12, 3.5, dt);
     g.position.y = damp(g.position.y, jarState.y + yOff + pointer.y * 0.08, 3.5, dt);
