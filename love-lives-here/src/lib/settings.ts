@@ -13,12 +13,19 @@ export type SchedulingSettings = {
   closedWeekdays: number[];
 };
 
-export type Claim = { value: string; label: string; verified: boolean };
+/**
+ * A statement shown in the stats strip. `needsEvidence` claims (counts, ratings)
+ * are hidden until staff tick "verified"; operational facts from the original
+ * site are shown but flagged in the admin until confirmed.
+ */
+export type Claim = { value: string; label: string; verified: boolean; needsEvidence: boolean };
 export type BusinessSettings = {
   whatsapp: string;
   phoneDisplay: string;
   email: string;
   hours: { days: string; time: string }[];
+  /** schema.org openingHours strings, e.g. "Mo-Fr 08:00-16:00" — keep in step with `hours`. */
+  openingHoursSchema: string[];
   claims: Claim[];
   instagram: string;
   tiktok: string;
@@ -38,10 +45,14 @@ export const DEFAULTS = {
       { days: "Saturday", time: "10am to 2pm" },
       { days: "Sunday", time: "2pm to 4pm" },
     ],
-    // Claims from the original site. Hidden until a staff member marks them verified.
+    openingHoursSchema: ["Mo-Fr 08:00-16:00", "Sa 10:00-14:00", "Su 14:00-16:00"],
+    // All from the original site's stats strip, none yet confirmed by LLH.
     claims: [
-      { value: "200+", label: "Letters delivered in Lagos", verified: false },
-      { value: "4.9★", label: "Customer rating", verified: false },
+      { value: "Est. 2025", label: "Made by hand in Lagos", verified: false, needsEvidence: false },
+      { value: "48 hrs", label: "Most orders ready", verified: false, needsEvidence: false },
+      { value: "Nationwide", label: "Delivery across Nigeria", verified: false, needsEvidence: false },
+      { value: "200+", label: "Letters delivered in Lagos", verified: false, needsEvidence: true },
+      { value: "4.9★", label: "Customer rating", verified: false, needsEvidence: true },
     ],
     instagram: "https://www.instagram.com/loveliveshere.ng/",
     tiktok: "https://www.tiktok.com/@loveliveshere.ng",
@@ -54,7 +65,18 @@ type Key = keyof typeof DEFAULTS;
 
 export async function getSetting<K extends Key>(key: K, tx: Tx = getDb()): Promise<(typeof DEFAULTS)[K]> {
   const row = await tx.query.settings.findFirst({ where: eq(schema.settings.key, key) });
-  return { ...DEFAULTS[key], ...((row?.value as object) ?? {}) } as (typeof DEFAULTS)[K];
+  const v = { ...DEFAULTS[key], ...((row?.value as object) ?? {}) } as (typeof DEFAULTS)[K];
+  if (key === "business") {
+    // Older saved rows predate needsEvidence: treat numeric/rating claims as needing evidence.
+    const b = v as BusinessSettings;
+    b.claims = b.claims.map((c) => ({ ...c, needsEvidence: c.needsEvidence ?? /\d+\+|★|rating/i.test(c.value + c.label) }));
+  }
+  return v;
+}
+
+/** Claims that may be shown publicly right now. */
+export function publicClaims(b: BusinessSettings) {
+  return b.claims.filter((c) => c.verified || !c.needsEvidence);
 }
 
 export async function setSetting<K extends Key>(key: K, value: (typeof DEFAULTS)[K], tx: Tx = getDb()) {

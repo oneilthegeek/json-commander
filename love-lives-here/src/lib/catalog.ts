@@ -58,3 +58,23 @@ export async function variantsByIds(ids: string[], tx: Tx = getDb()) {
     with: { product: true },
   });
 }
+
+export type BundlePart = { variantId: string; quantity: number; productName: string; variantName: string; stock: number | null; active: boolean };
+
+/** What a curated bundle contains (empty for non-bundles). */
+export async function bundleContents(bundleProductIds: string[], tx: Tx = getDb()): Promise<Map<string, BundlePart[]>> {
+  const out = new Map<string, BundlePart[]>();
+  if (!bundleProductIds.length) return out;
+  const rows = await tx
+    .select({ bundle: schema.bundleItems.bundleProductId, variantId: schema.bundleItems.variantId, quantity: schema.bundleItems.quantity, productName: schema.products.name, variantName: schema.productVariants.name, stock: schema.productVariants.stock, vActive: schema.productVariants.active, pActive: schema.products.active })
+    .from(schema.bundleItems)
+    .innerJoin(schema.productVariants, eq(schema.productVariants.id, schema.bundleItems.variantId))
+    .innerJoin(schema.products, eq(schema.products.id, schema.productVariants.productId))
+    .where(inArray(schema.bundleItems.bundleProductId, bundleProductIds));
+  for (const r of rows) {
+    const list = out.get(r.bundle) ?? [];
+    list.push({ variantId: r.variantId, quantity: r.quantity, productName: r.productName, variantName: r.variantName, stock: r.stock, active: r.vActive && r.pActive });
+    out.set(r.bundle, list);
+  }
+  return out;
+}

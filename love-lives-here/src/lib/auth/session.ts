@@ -82,7 +82,7 @@ export async function requireStaff(permission?: Permission, opts: { allowUnenrol
   const s = await getStaff();
   if (!s) redirect("/admin/login");
   if (s.totpEnabled && !s.mfaPassed) redirect("/admin/login/verify");
-  if (!s.totpEnabled && mfaRequired(s.role) && !opts.allowUnenrolled && process.env.LLH_ALLOW_NO_MFA !== "1") redirect("/admin/security?setup=1");
+  if (!s.totpEnabled && mfaRequired(s.role) && !opts.allowUnenrolled && !(process.env.LLH_ALLOW_NO_MFA === "1" && (process.env.NODE_ENV !== "production" || process.env.LLH_E2E === "1"))) redirect("/admin/security?setup=1");
   if (permission && !can(s.role, permission)) redirect(`/admin/denied?need=${encodeURIComponent(permission)}`);
   return s;
 }

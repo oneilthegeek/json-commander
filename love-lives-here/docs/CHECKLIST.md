@@ -1,5 +1,7 @@
 # Requirements checklist
 
+> Superseded by `QA-AUDIT.md` (final audit, 17 Nov 2026), which has current counts and statuses.
+
 Status key: ✅ done and tested · 🟡 done, needs an external account, credentials or a human check · ⛔ blocked/not done (reason given).
 “Tested” means an automated test in `tests/` exercises it unless noted. Test counts: 36 unit, 24 integration, 57 end-to-end (all passing — see `TEST-RESULTS.md`).
 

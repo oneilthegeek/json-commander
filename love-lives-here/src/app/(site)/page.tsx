@@ -3,7 +3,7 @@ import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
 import { listProducts } from "@/lib/catalog";
 import { toClient } from "@/lib/present";
-import { getSetting } from "@/lib/settings";
+import { getSetting, publicClaims } from "@/lib/settings";
 import { getDb, schema } from "@/lib/db";
 import { formatNaira } from "@/lib/money";
 import { appUrl } from "@/lib/config";
@@ -28,17 +28,12 @@ export default async function Home() {
   const gifts = products.filter((p) => p.kind !== "letter" && p.kind !== "flower");
   const flowers = products.filter((p) => p.kind === "flower");
   const goldCard = products.find((p) => p.kind === "gold_card");
-  const claims = business.claims.filter((c) => c.verified);
+
   const prices = products.flatMap((p) => p.variants.filter((v) => v.price != null && v.priceStatus !== "quote").map((v) => v.price!));
   const fixedZones = zones.filter((z) => z.mode === "fixed");
   const wa = business.whatsapp;
 
-  const stats = [
-    { num: "Est. 2025", lbl: "Made by hand in Lagos" },
-    { num: "48 hrs", lbl: "Most orders ready" },
-    { num: "Nationwide", lbl: "Delivery across Nigeria" },
-    ...claims.map((c) => ({ num: c.value, lbl: c.label })),
-  ];
+  const stats = publicClaims(business).map((c) => ({ num: c.value, lbl: c.label }));
 
   return (
     <>
@@ -51,7 +46,7 @@ export default async function Home() {
         areaServed: [{ "@type": "City", name: "Lagos" }, { "@type": "Country", name: "Nigeria" }],
         sameAs: [business.instagram, business.tiktok, business.substackProfile],
         ...(prices.length ? { priceRange: `${formatNaira(Math.min(...prices))} – ${formatNaira(Math.max(...prices))}` } : {}),
-        openingHours: ["Mo-Fr 08:00-16:00", "Sa 10:00-14:00", "Su 14:00-16:00"],
+        ...(business.openingHoursSchema.length ? { openingHours: business.openingHoursSchema } : {}),
       }} />
 
       <section className="hero" aria-labelledby="hero-h">
@@ -71,11 +66,11 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="stats" aria-label="About Love Lives Here">
+      {stats.length > 0 && <section className="stats" aria-label="About Love Lives Here">
         <div className="box" style={{ ["--n" as string]: stats.length }}>
           {stats.map((s) => <div className="stat-i" key={s.lbl}><span className="num">{s.num}</span><span className="lbl">{s.lbl}</span></div>)}
         </div>
-      </section>
+      </section>}
 
       {letter && (
         <section className="feature-band" aria-labelledby="letter-h">

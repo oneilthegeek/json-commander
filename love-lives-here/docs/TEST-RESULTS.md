@@ -1,5 +1,7 @@
 # Test results (17 November 2026)
 
+> Superseded by `QA-AUDIT.md` (final audit, 17 Nov 2026), which has current counts and statuses.
+
 | Suite | Command | Result |
 |---|---|---|
 | Type check | `npm run typecheck` | ✅ no errors |

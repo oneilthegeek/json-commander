@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProduct, relatedProducts, fromPrice } from "@/lib/catalog";
+import { getProduct, relatedProducts, fromPrice, bundleContents } from "@/lib/catalog";
 import { toClient } from "@/lib/present";
 import { getSetting } from "@/lib/settings";
 import { appUrl } from "@/lib/config";
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const p = await getProduct((await params).slug);
   if (!p) notFound();
-  const [related, business] = await Promise.all([relatedProducts(p.id), getSetting("business")]);
+  const [related, business, bundle] = await Promise.all([relatedProducts(p.id), getSetting("business"), p.kind === "bundle" ? bundleContents([p.id]).then((m) => m.get(p.id) ?? []) : Promise.resolve([])]);
   const cp = toClient(p);
   const low = fromPrice(p);
   const offers = p.variants.filter((v) => v.price != null && v.priceStatus !== "quote");
@@ -74,6 +74,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           {low == null && <p className="alert info" style={{ margin: 0 }}>This is priced on request. Message us and we&apos;ll give you a price for the size you want.</p>}
           <div className="sticky-buy"><AddToBag product={cp} whatsapp={business.whatsapp} showQty={p.kind !== "letter"} /></div>
           <div>{p.description.split("\n").map((para, i) => <p key={i}>{para}</p>)}</div>
+          {bundle.length > 0 && (
+            <div><h2 style={{ fontSize: 20, marginBottom: 6 }}>In this bundle</h2>
+              <ul style={{ margin: 0, paddingLeft: 18 }}>{bundle.map((b) => <li key={b.variantId}>{b.quantity > 1 ? `${b.quantity} × ` : ""}{b.productName}{b.variantName !== b.productName ? ` — ${b.variantName}` : ""}</li>)}</ul>
+            </div>
+          )}
           <div className="facts">
             <div><span aria-hidden="true">✦</span><span>Made to order in about {p.productionDays} working day{p.productionDays === 1 ? "" : "s"}, then delivered on the date you choose.</span></div>
             {p.requiresApproval && <div><span aria-hidden="true">✦</span><span>You read the words first. Nothing is sealed until you approve.</span></div>}

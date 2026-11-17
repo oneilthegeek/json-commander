@@ -16,7 +16,7 @@ export default async function Content() {
       <h1 style={{ fontSize: 36 }}>Site content</h1>
       <section className="card" aria-labelledby="b-h">
         <h2 id="b-h">Contact details, hours and claims</h2>
-        <p className="hint" style={{ margin: 0 }}>These came from the old site and need checking. Claims (like ratings) only appear on the site once you tick “Verified” — tick only if you can show evidence.</p>
+        <p className="hint" style={{ margin: 0 }}>Everything here came from the old site and needs checking. Counts and ratings (marked “needs evidence”) stay hidden until you tick “Verified” — tick only if you can show evidence. Other facts show now; tick “Verified” once confirmed.</p>
         <ActionForm action={saveBusiness} submit="Save">
           <div className="fg2">
             <div className="f"><label htmlFor="whatsapp">WhatsApp (digits with country code)</label><input id="whatsapp" name="whatsapp" type="text" defaultValue={b.whatsapp} /></div>
@@ -24,8 +24,9 @@ export default async function Content() {
           </div>
           <div className="f"><label htmlFor="email">Email</label><input id="email" name="email" type="email" defaultValue={b.email} /></div>
           {b.hours.map((h, i) => <div className="fg2" key={i}><div className="f"><label htmlFor={`hd-${i}`}>Days</label><input id={`hd-${i}`} name={`hours-days-${i}`} type="text" defaultValue={h.days} /></div><div className="f"><label htmlFor={`ht-${i}`}>Hours</label><input id={`ht-${i}`} name={`hours-time-${i}`} type="text" defaultValue={h.time} /></div></div>)}
-          <fieldset className="f"><legend>Claims</legend>
-            {b.claims.map((c, i) => <div className="inline-form" key={i}><div className="f"><label htmlFor={`cv-${i}`}>Value</label><input id={`cv-${i}`} name={`claim-value-${i}`} type="text" defaultValue={c.value} /></div><div className="f"><label htmlFor={`cl-${i}`}>Label</label><input id={`cl-${i}`} name={`claim-label-${i}`} type="text" defaultValue={c.label} /></div><label className="check"><input type="checkbox" name={`claim-verified-${i}`} defaultChecked={c.verified} /> Verified</label></div>)}
+          <div className="f"><label htmlFor="ohs">Opening hours for Google (one per line, e.g. Mo-Fr 08:00-16:00)</label><textarea id="ohs" name="openingHoursSchema" rows={3} defaultValue={b.openingHoursSchema.join("\n")} /></div>
+          <fieldset className="f"><legend>Stats strip</legend>
+            {b.claims.map((c, i) => <div className="inline-form" key={i}><div className="f"><label htmlFor={`cv-${i}`}>Value</label><input id={`cv-${i}`} name={`claim-value-${i}`} type="text" defaultValue={c.value} /></div><div className="f"><label htmlFor={`cl-${i}`}>Label</label><input id={`cl-${i}`} name={`claim-label-${i}`} type="text" defaultValue={c.label} /></div><label className="check"><input type="checkbox" name={`claim-verified-${i}`} defaultChecked={c.verified} /> Verified</label>{c.needsEvidence ? <span className={`badge ${c.verified ? "ok" : "warn"}`}>{c.verified ? "shown" : "needs evidence — hidden"}</span> : <span className={`badge ${c.verified ? "ok" : "warn"}`}>{c.verified ? "confirmed" : "shown, not yet confirmed"}</span>}</div>)}
           </fieldset>
         </ActionForm>
       </section>

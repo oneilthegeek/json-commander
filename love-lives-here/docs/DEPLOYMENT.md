@@ -27,7 +27,9 @@ Alternative: Vercel (Pro plan is required for commercial use) + Neon/Supabase Po
    ```
    15 2 * * *  BACKUP_PASSPHRASE=... /opt/llh/love-lives-here/deploy/backup.sh
    40 2 * * *  cd /opt/llh/love-lives-here/deploy && docker compose run --rm ops tsx scripts/retention.ts
+   */5 * * * * cd /opt/llh/love-lives-here/deploy && docker compose run --rm ops tsx scripts/flush-outbox.ts
    ```
+   (Emails are sent immediately after each action; the 5-minute job only retries failures.)
 
 ## Paystack (payments)
 1. Paystack dashboard → Settings → API Keys & Webhooks.
@@ -48,12 +50,13 @@ Substack has **no official API for adding subscribers**, so pick one of these:
 Then add the **real individual post URLs** to the Dear Lovers cards in Admin → Site content. Cards stay hidden until each has a URL.
 
 ## Transactional email (optional but recommended)
-Set `RESEND_API_KEY` and `EMAIL_FROM` (verify the domain in Resend). Without it, every customer message (receipts, approval links, quotes, dispatch) waits in **Admin → Outbox** with a one-tap “Open in email” button, plus WhatsApp links on each order. Nothing is reported as sent unless it was.
+Set `RESEND_API_KEY` and `EMAIL_FROM` (verify the domain in Resend). Emails then go out automatically straight after each order, payment, draft, quote and dispatch, and failures are retried by the cron job. Without it, every customer message (receipts, approval links, quotes, dispatch) waits in **Admin → Outbox** with a one-tap “Open in email” button, plus WhatsApp links on each order. Nothing is reported as sent unless it was.
 
 ## Monitoring and errors
 - Docker restarts the app automatically, and there's a health check on `/robots.txt`.
 - Use any uptime monitor (e.g. UptimeRobot, free) on `https://loveliveshere.ng/` and `/api/zones`.
-- Server errors are logged to stdout: `docker compose logs -f app`. For alerting, add an error tracker such as Sentry (not included, to avoid an extra paid dependency).
+- Server errors are logged to stdout: `docker compose logs -f app`.
+- **Alerts:** set `ALERT_WEBHOOK_URL` to a Slack, Discord or Google Chat incoming webhook to be told about unhandled server errors, payment amount mismatches, duplicate payments, failed webhook processing, failed emails and stock shortfalls. Alerts contain order numbers only, never customer details. A full error tracker such as Sentry is optional.
 
 ## Backups and recovery
 - `deploy/backup.sh` writes a nightly `pg_dump`, encrypts it with GPG, copies it off-site with rclone and keeps 30 days.

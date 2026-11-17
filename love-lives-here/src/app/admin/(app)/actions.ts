@@ -22,7 +22,7 @@ import { getSetting, setSetting } from "@/lib/settings";
 import { isIsoDate } from "@/lib/dates";
 import * as nfc from "@/lib/nfc-edit";
 import { createExperience } from "@/lib/nfc";
-import { flushOutbox, markManual, queueNotification } from "@/lib/notifications";
+import { flushOutbox, kickOutbox, markManual, queueNotification } from "@/lib/notifications";
 import type { ActionResult } from "@/components/ActionForm";
 
 const str = (fd: FormData, k: string, max = 500) => String(fd.get(k) ?? "").trim().slice(0, max);
@@ -144,6 +144,7 @@ export async function sendDraft(orderId: string, draftId: string): Promise<Actio
       await addEvent(tx, { orderId, type: "status", from: "drafting", to: "awaiting_approval", message: "Your letter is ready for you to read. Nothing is sealed until you say yes.", visible: true, actorId: s.id, actorLabel: s.email });
       if (o.buyerEmail) await queueNotification(tx, { orderId, channel: "email", to: o.buyerEmail, subject: `Your letter is ready to read — ${o.number}`, body: `Hi ${o.buyerName},\n\nYour letter for ${o.recipientName} is ready. Read it and approve it (or ask for changes) here:\n${trackingUrl(o)}\n\nNothing is sealed until you say yes.\n\nLove Lives Here` });
     });
+    kickOutbox();
     await log(s, "letter.send", "order", orderId, { draftId });
     revalidatePath(`/admin/orders/${orderId}`);
     return { ok: true, message: "Sent for approval." };
@@ -413,12 +414,15 @@ export async function saveBusiness(_p: ActionResult, fd: FormData): Promise<Acti
   return guard("settings.edit", async (s) => {
     const b = await getSetting("business");
     const claims = b.claims.map((c, i) => ({ ...c, value: str(fd, `claim-value-${i}`, 20) || c.value, label: str(fd, `claim-label-${i}`, 60) || c.label, verified: fd.get(`claim-verified-${i}`) === "on" }));
+    const openingHoursSchema = str(fd, "openingHoursSchema", 400).split("\n").map((l) => l.trim()).filter(Boolean);
+    if (openingHoursSchema.some((l) => !/^(Mo|Tu|We|Th|Fr|Sa|Su)(-(Mo|Tu|We|Th|Fr|Sa|Su))?(,(Mo|Tu|We|Th|Fr|Sa|Su))* \d{2}:\d{2}-\d{2}:\d{2}$/.test(l)))
+      return { error: "Opening hours for Google must look like “Mo-Fr 08:00-16:00”, one per line." };
     const hours = b.hours.map((h, i) => ({ days: str(fd, `hours-days-${i}`, 40) || h.days, time: str(fd, `hours-time-${i}`, 40) || h.time }));
     const wa = str(fd, "whatsapp", 20).replace(/\D/g, "");
     const email = str(fd, "email", 160);
     if (!/^\d{10,15}$/.test(wa)) return { error: "WhatsApp number must be digits with country code, e.g. 2348107134258." };
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Enter a valid email." };
-    const next = { ...b, whatsapp: wa, email, phoneDisplay: str(fd, "phoneDisplay", 30) || b.phoneDisplay, claims, hours };
+    const next = { ...b, whatsapp: wa, email, phoneDisplay: str(fd, "phoneDisplay", 30) || b.phoneDisplay, claims, hours, openingHoursSchema };
     await setSetting("business", next);
     await log(s, "settings.business", "settings", "business", { claims: claims.map((c) => [c.value, c.verified]) });
     revalidatePath("/", "layout");
@@ -525,4 +529,32 @@ export async function changePassword(_p: ActionResult, fd: FormData): Promise<Ac
 export async function signOut() {
   await logout();
   redirect("/admin/login");
+}
+
+// ------------------------------------------------------------------ bundles
+export async function addBundleItem(productId: string, _p: ActionResult, fd: FormData): Promise<ActionResult> {
+  return guard("products.edit", async (s) => {
+    const db = getDb();
+    const p = await db.query.products.findFirst({ where: eq(schema.products.id, productId) });
+    if (!p || p.kind !== "bundle") return { error: "Only bundle products have contents." };
+    const variantId = str(fd, "variantId", 40);
+    const qty = Number(str(fd, "quantity", 3) || "1");
+    if (!Number.isInteger(qty) || qty < 1 || qty > 20) return { error: "Quantity must be 1–20." };
+    const v = await db.query.productVariants.findFirst({ where: eq(schema.productVariants.id, variantId), with: { product: true } });
+    if (!v || v.product.kind === "bundle") return { error: "Choose an item (bundles can't contain bundles)." };
+    await db.insert(schema.bundleItems).values({ bundleProductId: productId, variantId, quantity: qty })
+      .onConflictDoUpdate({ target: [schema.bundleItems.bundleProductId, schema.bundleItems.variantId], set: { quantity: qty } });
+    await log(s, "bundle.item", "product", productId, { variantId, qty });
+    revalidatePath(`/admin/products/${productId}`);
+    return { ok: true, message: "Saved." };
+  }) as Promise<ActionResult>;
+}
+
+export async function removeBundleItem(productId: string, variantId: string): Promise<ActionResult> {
+  return guard("products.edit", async (s) => {
+    await getDb().delete(schema.bundleItems).where(and(eq(schema.bundleItems.bundleProductId, productId), eq(schema.bundleItems.variantId, variantId)));
+    await log(s, "bundle.remove", "product", productId, { variantId });
+    revalidatePath(`/admin/products/${productId}`);
+    return { ok: true, message: "Removed." };
+  }) as Promise<ActionResult>;
 }

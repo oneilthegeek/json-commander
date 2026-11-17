@@ -5,7 +5,7 @@
  */
 import { eq } from "drizzle-orm";
 import { getDb, schema, type Tx } from "./db";
-import { variantsByIds } from "./catalog";
+import { bundleContents, variantsByIds } from "./catalog";
 
 export const MAX_QTY_PER_LINE = 20;
 export const MAX_LINES = 30;
@@ -74,6 +74,7 @@ export async function priceCart(rawLines: unknown, zoneId: number | null | undef
   const errors: PricedCart["errors"] = [];
   const variants = await variantsByIds(input.map((l) => l.variantId), tx);
   const byId = new Map(variants.map((v) => [v.id, v]));
+  const bundles = await bundleContents(variants.filter((v) => v.product.kind === "bundle").map((v) => v.productId), tx);
   const lines: PricedLine[] = [];
 
   for (const l of input) {
@@ -89,6 +90,14 @@ export async function priceCart(rawLines: unknown, zoneId: number | null | undef
     if (v.product.kind === "letter" && l.quantity > 1) {
       errors.push({ variantId: v.id, message: "Each letter is written for one person, so it's one letter per order. Place a second order for another letter." });
       continue;
+    }
+    if (v.product.kind === "bundle") {
+      const parts = bundles.get(v.productId) ?? [];
+      const short = parts.find((p) => !p.active || (p.stock != null && p.stock < p.quantity * l.quantity));
+      if (!parts.length || short) {
+        errors.push({ variantId: v.id, message: !parts.length ? `${v.product.name} isn't ready to order yet.` : `${v.product.name} is unavailable right now (${short!.productName} is out of stock).` });
+        continue;
+      }
     }
     if (v.stock != null && v.stock < l.quantity) {
       errors.push({

@@ -44,7 +44,12 @@ export function CheckoutForm({ zones, privacyVersion }: { zones: Zone[]; privacy
   useEffect(() => { setF((x) => ({ ...x, giftNote: x.giftNote || cart.giftNote })); }, [cart.ready]); // eslint-disable-line react-hooks/exhaustive-deps
   // Count abandonment (no personal data) if they leave with a full bag
   useEffect(() => {
-    const onHide = () => { if (document.visibilityState === "hidden" && cart.lines.length && !busy) track("checkout_abandon"); };
+    // Counted at most once per browser session, and never after the order was submitted.
+    const onHide = () => {
+      if (document.visibilityState !== "hidden" || !cart.lines.length || busy) return;
+      try { if (sessionStorage.getItem("llh-abandon")) return; sessionStorage.setItem("llh-abandon", "1"); } catch { /* ignore */ }
+      track("checkout_abandon");
+    };
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
   }, [cart.lines.length, busy]);

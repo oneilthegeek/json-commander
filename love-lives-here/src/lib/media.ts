@@ -18,7 +18,8 @@ export function sniff(b: Buffer): Sniffed {
   if (b.toString("ascii", 0, 4) === "RIFF" && b.toString("ascii", 8, 12) === "WEBP") return { mime: "image/webp", kind: "image" };
   if (b.toString("ascii", 4, 8) === "ftyp") {
     const brand = b.toString("ascii", 8, 12);
-    if (["heic", "heix", "mif1", "msf1"].includes(brand)) return { mime: "image/heic", kind: "image" };
+    // HEIC/HEIF is deliberately not accepted: Chrome, Firefox and most Android browsers can't display it.
+    if (["heic", "heix", "mif1", "msf1"].includes(brand)) return null;
     if (["M4A ", "M4B ", "mp42", "isom", "dash"].includes(brand)) return { mime: "audio/mp4", kind: "audio" };
   }
   if (b.toString("ascii", 0, 3) === "ID3" || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0)) return { mime: "audio/mpeg", kind: "audio" };
@@ -37,7 +38,7 @@ export async function storeUpload(file: File, opts: { experienceId: string; uplo
   const buf = Buffer.from(await file.arrayBuffer());
   const s = sniff(buf);
   if (!s || s.kind !== opts.expect)
-    throw new UploadError(opts.expect === "image" ? "Upload a JPEG, PNG, WebP or HEIC photo." : "Upload an MP3, M4A, OGG, WAV or WebM voice note.");
+    throw new UploadError(opts.expect === "image" ? "Upload a JPEG, PNG or WebP photo. (iPhone HEIC photos: share or export them as JPEG — most phones do this automatically when you pick a photo here.)" : "Upload an MP3, M4A, OGG, WAV or WebM voice note.");
   const db = getDb();
   const count = await db.$count(schema.mediaAssets, eq(schema.mediaAssets.experienceId, opts.experienceId));
   if (count >= LIMITS.perExperience) throw new UploadError(`You can add up to ${LIMITS.perExperience} files to one card.`);

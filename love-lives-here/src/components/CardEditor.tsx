@@ -81,7 +81,7 @@ export function CardEditor({ e, items, ops, mediaUrl }: { e: Experience; items: 
         <div className="card">
           <h2>Add a photo</h2>
           <ActionForm action={ops.photo} submit="Upload photo" resetOnSuccess>
-            <div className="f"><label htmlFor="p-file">Photo (JPEG, PNG, WebP or HEIC, up to 6 MB)</label><input id="p-file" name="file" type="file" accept="image/jpeg,image/png,image/webp,image/heic" required /></div>
+            <div className="f"><label htmlFor="p-file">Photo (JPEG, PNG or WebP, up to 6 MB)</label><input id="p-file" name="file" type="file" accept="image/jpeg,image/png,image/webp" required /></div>
             <div className="f"><label htmlFor="p-title">Caption <span className="opt-l">optional</span></label><input id="p-title" name="title" type="text" maxLength={120} /></div>
           </ActionForm>
         </div>

@@ -10,11 +10,28 @@ import { appUrl, addEvent, OrderError, trackingUrl, verifyTracking } from "./ord
 import * as paystack from "./paystack";
 import { paymentReference, sha256 } from "./tokens";
 import { track } from "./analytics";
-import { queueNotification } from "./notifications";
+import { kickOutbox, queueNotification } from "./notifications";
+import { alert } from "./alert";
 import { CUSTOMER_MESSAGE } from "./order-status";
 import { compareIso, lagosToday, addDays } from "./dates";
 import { formatNaira } from "./money";
 import { createExperience } from "./nfc";
+import { bundleContents } from "./catalog";
+
+/** Decrements tracked stock for a paid order (bundles consume their contents). Flags shortfalls for staff. */
+async function consumeStock(tx: Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0], orderId: string, orderNumber: string) {
+  const rawItems = await tx.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, orderId));
+  const parts = await bundleContents(rawItems.filter((i) => i.kind === "bundle").map((i) => i.productId), tx);
+  const items = rawItems.flatMap((it) => it.kind !== "bundle" ? [it] : [it, ...(parts.get(it.productId) ?? []).map((p) => ({ ...it, variantId: p.variantId, quantity: p.quantity * it.quantity, productName: p.productName, variantName: p.variantName }))]);
+  for (const it of items) {
+    const r = await tx.execute(sql`update product_variants set stock = stock - ${it.quantity} where id = ${it.variantId} and stock is not null and stock >= ${it.quantity} returning id`);
+    const tracked = await tx.query.productVariants.findFirst({ where: eq(schema.productVariants.id, it.variantId), columns: { stock: true } });
+    if (tracked?.stock != null && r.rowCount === 0) {
+      await alert("stock_short", `Not enough stock for ${it.productName} (${it.variantName}).`, orderNumber);
+      await addEvent(tx, { orderId, type: "stock_short", message: `Not enough stock of ${it.productName} (${it.variantName}) to cover this paid order. Restock or contact the buyer.`, actorLabel: "system" });
+    }
+  }
+}
 
 /** One digital experience per Gold Card / LLH Tag bought. Idempotent. */
 async function ensureExperiences(tx: Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0], orderId: string) {
@@ -65,7 +82,7 @@ export async function verifyAndApply(reference: string, via: "callback" | "webho
   if (!payment) return { outcome: "unknown_reference" };
   const v = await paystack.verifyTransaction(reference);
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx): Promise<ApplyResult> => {
     // Lock the order row so concurrent callback + webhook can't both apply.
     await tx.execute(sql`select id from orders where id = ${payment.orderId} for update`);
     const order = (await tx.query.orders.findFirst({ where: eq(schema.orders.id, payment.orderId) }))!;
@@ -100,16 +117,7 @@ export async function verifyAndApply(reference: string, via: "callback" | "webho
       await tx.update(schema.orders).set({ status: "paid", paymentStatus: "paid", paidAt: new Date(), testMode: v.domain === "test", updatedAt: new Date() }).where(eq(schema.orders.id, order.id));
       await addEvent(tx, { orderId: order.id, type: "status", from: order.status, to: "paid", message: CUSTOMER_MESSAGE.paid, visible: true, actorLabel: `system:${via}` });
 
-      // Decrement tracked stock now that the sale is real.
-      const items = await tx.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
-      for (const it of items) {
-        const r = await tx.execute(sql`update product_variants set stock = stock - ${it.quantity} where id = ${it.variantId} and stock is not null and stock >= ${it.quantity} returning id`);
-        const tracked = await tx.query.productVariants.findFirst({ where: eq(schema.productVariants.id, it.variantId), columns: { stock: true } });
-        if (tracked?.stock != null && r.rowCount === 0) {
-          await addEvent(tx, { orderId: order.id, type: "stock_short", message: `Not enough stock of ${it.productName} (${it.variantName}) to cover this paid order. Restock or contact the buyer.`, actorLabel: "system" });
-        }
-      }
-
+      await consumeStock(tx, order.id, order.number);
       await ensureExperiences(tx, order.id);
       await track(tx, { name: "purchase", orderNumber: order.number, value: p.amount, test: v.domain === "test", source: order.source?.source, medium: order.source?.medium, campaign: order.source?.campaign });
       if (order.buyerEmail) {
@@ -130,6 +138,10 @@ export async function verifyAndApply(reference: string, via: "callback" | "webho
     }
     return { outcome: "pending", orderNumber: order.number };
   });
+  if (result.outcome === "paid") kickOutbox();
+  if (result.outcome === "mismatch") await alert("payment_mismatch", "Paystack amount/currency didn't match; order not marked paid.", result.orderNumber);
+  if (result.outcome === "duplicate") await alert("duplicate_payment", "A second successful payment needs a refund.", result.orderNumber);
+  return result;
 }
 
 /** Handles a verified webhook body. Returns a short result string for logging. */
@@ -150,6 +162,7 @@ export async function handleWebhook(raw: string): Promise<string> {
       result = await applyRefundEvent(reference, String(data.status ?? event.split(".")[1]), Number(data.amount ?? 0));
     }
   } catch (e) {
+    await alert("webhook_failed", `Paystack ${event} processing failed: ${(e as Error).message}`, reference ?? undefined);
     // Let Paystack retry: remove the dedupe row so the next delivery is processed.
     await db.delete(schema.webhookEvents).where(eq(schema.webhookEvents.id, ins[0].id));
     throw e;
@@ -224,6 +237,7 @@ export async function recordManualPayment(orderId: string, note: string, actor: 
     await tx.update(schema.orders).set({ status: "paid", paymentStatus: "paid", paidAt: new Date(), updatedAt: new Date() }).where(eq(schema.orders.id, orderId));
     await addEvent(tx, { orderId, type: "status", from: o.status, to: "paid", message: CUSTOMER_MESSAGE.paid, visible: true, actorId: actor.id, actorLabel: actor.email });
     await addEvent(tx, { orderId, type: "manual_payment", message: `Marked paid manually: ${note}`, actorId: actor.id, actorLabel: actor.email });
+    await consumeStock(tx, orderId, o.number);
     await ensureExperiences(tx, orderId);
     await track(tx, { name: "purchase", orderNumber: o.number, value: o.total });
   });

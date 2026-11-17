@@ -29,6 +29,8 @@ export default function Terms() {
       <p>See our <Link href="/refunds">refunds and returns policy</Link>.</p>
       <h2>Liability</h2>
       <p>Nothing in these terms limits your rights under Nigerian consumer protection law, including the Federal Competition and Consumer Protection Act 2018. We&apos;re not responsible for delays caused by events outside our reasonable control, such as severe weather, road closures or strikes, but we&apos;ll keep you informed and agree a new date or refund.</p>
+      <h2>Governing law</h2>
+      <p>These terms are governed by the laws of the Federal Republic of Nigeria. If we can&apos;t resolve a complaint together, it may be brought before the courts of Lagos State, without affecting your right to contact the Federal Competition and Consumer Protection Commission.</p>
       <h2>Contact</h2>
       <p><Link href="/contact">Contact us</Link> with any question about these terms.</p>
     </Policy>

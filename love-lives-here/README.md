@@ -8,6 +8,7 @@ The Love Lives Here website (handwritten letters, Secret Candles, Gold Cards, LL
 | Read next | |
 |---|---|
 | `docs/AUDIT.md` | What the original site had, every defect found, and what changed |
+| `docs/QA-AUDIT.md` | **Final audit: traceability matrix, test results, readiness verdict** |
 | `docs/CHECKLIST.md` | Each requirement with its status, including what is still blocked |
 | `docs/TEST-RESULTS.md` | Test, Lighthouse, audit and backup results |
 | `docs/DEPLOYMENT.md` | Going live: server, Paystack, newsletter, email, backups, Search Console |
@@ -38,6 +39,7 @@ Without `PAYSTACK_SECRET_KEY` the shop works but can't take online payments. Cus
 | `npm run db:migrate` / `db:seed` | Apply migrations / load the catalogue and delivery zones from the original site (idempotent) |
 | `npm run staff:create` | Create or reset a staff account (password is prompted for, never passed as an argument) |
 | `npm run retention` | Data-retention job (add `-- --dry-run` to preview) |
+| `npm run outbox` | Send queued customer emails / retry failures (cron backstop) |
 | `npm run images` | Re-extract images from the original HTML |
 
 ## Project structure

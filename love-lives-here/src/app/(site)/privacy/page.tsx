@@ -46,6 +46,8 @@ export default async function Privacy() {
       <p>Please only share the recipient&apos;s details you need to share for the delivery, and only things you&apos;re comfortable with us reading. If the recipient contacts us, we&apos;ll respect their rights too.</p>
       <h2>Security</h2>
       <p>Our site uses HTTPS. Staff accounts use strong passwords and two-factor sign-in. Gold Card pages use long, random links that can&apos;t be guessed, and can be protected with a code or set to expire. Access to orders is logged.</p>
+      <h2>Cookies and browser storage</h2>
+      <p>We don&apos;t use advertising or tracking cookies. Your bag and any letter you&apos;re drafting are kept in your own browser&apos;s storage so they survive a refresh; you can clear them by emptying your bag or clearing site data. A random visit ID (not linked to you) is kept for the browser session for the anonymous usage counts. Staff sign-in and Gold Card secret-word unlocks use strictly necessary cookies.</p>
       <h2>Children</h2>
       <p>Our shop is for adults (18+). We don&apos;t knowingly collect data from children except as a gift recipient&apos;s name and address supplied by an adult.</p>
       <h2>Changes</h2>

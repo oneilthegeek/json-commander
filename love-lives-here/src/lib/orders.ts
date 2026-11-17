@@ -8,7 +8,7 @@ import { addDays } from "./dates";
 import { getSetting } from "./settings";
 import type { CheckoutInput } from "./validation";
 import { CUSTOMER_MESSAGE, STATUS_LABEL, canTransition, type OrderStatus } from "./order-status";
-import { queueNotification } from "./notifications";
+import { kickOutbox, queueNotification } from "./notifications";
 import { track } from "./analytics";
 import { appUrl } from "./config";
 
@@ -58,7 +58,7 @@ export async function createOrder(input: CheckoutInput, db = getDb()): Promise<C
 
   const legal = await getSetting("legal", db);
 
-  return db.transaction(async (tx) => {
+  const created = await db.transaction(async (tx) => {
     // Serialise bookings for the same delivery date so capacity can't be oversold.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"delivery:" + input.delivery.date}))`);
 
@@ -153,12 +153,14 @@ export async function createOrder(input: CheckoutInput, db = getDb()): Promise<C
     }
     return { order, token, url, replayed: false };
   });
+  kickOutbox();
+  return created;
 }
 
 /** Staff sets the delivery fee for an awaiting-quote order; it then becomes payable. */
 export async function setDeliveryQuote(orderId: string, feeKobo: number, actor: { id: string; email: string }) {
   if (!Number.isInteger(feeKobo) || feeKobo < 0 || feeKobo > 50_000_000) throw new OrderError("Enter a valid delivery fee.");
-  return getDb().transaction(async (tx) => {
+  const updated = await getDb().transaction(async (tx) => {
     const o = await tx.query.orders.findFirst({ where: eq(schema.orders.id, orderId) });
     if (!o) throw new OrderError("Order not found", undefined, 404);
     if (o.status !== "awaiting_quote" && o.status !== "pending_payment") throw new OrderError("Only unpaid orders can have their delivery fee changed.");
@@ -179,10 +181,12 @@ export async function setDeliveryQuote(orderId: string, feeKobo: number, actor: 
     }
     return u;
   });
+  kickOutbox();
+  return updated;
 }
 
 export async function transitionOrder(orderId: string, to: OrderStatus, actor: { id: string | null; label: string }, note?: string) {
-  return getDb().transaction(async (tx) => {
+  const moved = await getDb().transaction(async (tx) => {
     const o = await tx.query.orders.findFirst({ where: eq(schema.orders.id, orderId) });
     if (!o) throw new OrderError("Order not found", undefined, 404);
     const approved = await tx.query.letterDrafts.findFirst({ where: and(eq(schema.letterDrafts.orderId, orderId), eq(schema.letterDrafts.status, "approved")) });
@@ -203,6 +207,8 @@ export async function transitionOrder(orderId: string, to: OrderStatus, actor: {
     }
     return u;
   });
+  kickOutbox();
+  return moved;
 }
 
 export async function getOrderByNumber(number: string, tx: Tx = getDb()) {
