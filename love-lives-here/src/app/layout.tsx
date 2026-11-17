@@ -22,6 +22,7 @@ export const metadata: Metadata = {
   icons: { icon: "/icon.svg" },
   // Google Search Console "HTML tag" verification (DNS TXT verification needs no code). Set the
   // content value from Search Console in GOOGLE_SITE_VERIFICATION; nothing is emitted when unset.
+  ...(process.env.SITE_PREVIEW_NOTICE ? { robots: { index: false, follow: false } } : {}),
   ...(process.env.GOOGLE_SITE_VERIFICATION ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } } : {}),
 };
 
@@ -33,7 +34,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   await headers();
   return (
     <html lang="en-NG" className={`${bodoni.variable} ${karla.variable} ${caveat.variable}`}>
-      <body>{children}</body>
+      <body>
+        {/* Staging/preview servers only: set SITE_PREVIEW_NOTICE to show a strip on every page and keep search engines out. */}
+        {process.env.SITE_PREVIEW_NOTICE && <div className="preview-note" role="note">{process.env.SITE_PREVIEW_NOTICE}</div>}
+        {children}
+      </body>
     </html>
   );
 }

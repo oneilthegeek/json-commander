@@ -380,3 +380,6 @@ table.t { width: 100%; border-collapse: collapse; font-size: 14px; }
 pre.brief { white-space: pre-wrap; font: 15px/1.6 var(--ui); background: #F7EFEB; padding: 14px; margin: 0; overflow-wrap: anywhere; }
 @media print { .admin-top, .no-print, .wa-float, .site-head, .bar, footer.site-foot { display: none !important; } body { background: #fff; } }
 
+
+/* Preview/staging strip (only when SITE_PREVIEW_NOTICE is set) */
+.preview-note { background: var(--gold); color: var(--cherry); text-align: center; font-size: 13px; font-weight: 600; padding: 6px 12px; line-height: 1.4; }
