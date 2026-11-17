@@ -1,5 +1,5 @@
 "use client";
-import { useActionState, useEffect, useRef } from "react";
+import { startTransition, useActionState, useEffect, useRef } from "react";
 
 export type ActionResult = { ok?: boolean; error?: string; message?: string };
 type Act = (prev: ActionResult, fd: FormData) => Promise<ActionResult>;
@@ -12,7 +12,13 @@ export function ActionForm({ action, children, submit, className = "form", confi
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => { if (state.ok && resetOnSuccess) ref.current?.reset(); }, [state, resetOnSuccess]);
   return (
-    <form ref={ref} action={run} className={className} onSubmit={(e) => { if (confirm && !window.confirm(confirm)) e.preventDefault(); }}>
+    // Submitting manually (not via the action prop) keeps what the person typed if the server rejects it.
+    <form ref={ref} className={className} onSubmit={(e) => {
+      e.preventDefault();
+      if (confirm && !window.confirm(confirm)) return;
+      const fd = new FormData(e.currentTarget);
+      startTransition(() => run(fd));
+    }}>
       {children}
       <div className="row">
         <button className={submitClass} type="submit" disabled={pending}>{pending ? "Saving…" : submit}</button>

@@ -291,3 +291,16 @@ describe("settings", () => {
     void setSetting;
   });
 });
+
+describe("rate limiting", () => {
+  it("blocks after the limit within the window", async () => {
+    const { rateLimit } = await import("@/lib/rate-limit");
+    const prev = process.env.RATE_LIMIT_DISABLED;
+    delete process.env.RATE_LIMIT_DISABLED;
+    const key = `test:${Date.now()}`;
+    const results = [];
+    for (let i = 0; i < 4; i++) results.push((await rateLimit(key, 3, 60)).ok);
+    expect(results).toEqual([true, true, true, false]);
+    process.env.RATE_LIMIT_DISABLED = prev;
+  });
+});

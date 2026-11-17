@@ -55,7 +55,7 @@ export default async function GoldCard() {
           </div>
           <div className="stack">
             <h2 style={{ fontSize: "clamp(26px,3vw,36px)" }}>How it works</h2>
-            <ol className="dlv"><span className="sr-only">Steps</span>
+            <ol className="dlv" aria-label="Steps">
               <li><b>Order the card.</b> After you pay, your order page shows a “Gold Card” section.</li>
               <li><b>Add what you want them to see.</b> Type your notes, upload photos or a voice note, paste a playlist link. Preview it any time.</li>
               <li><b>We check it and switch it on.</b> Each card gets its own long, private link that can&apos;t be guessed.</li>

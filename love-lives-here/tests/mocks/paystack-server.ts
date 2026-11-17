@@ -74,8 +74,8 @@ export function startMockPaystack(opts: { port: number; secret: string; webhookU
         const back = new URL(t.callback); back.searchParams.set("trxref", t.reference); back.searchParams.set("reference", t.reference);
         res.writeHead(302, { Location: back.toString() }); return res.end();
       }
-      res.writeHead(200, { "Content-Type": "text/html" });
-      return res.end(`<!doctype html><title>Mock Paystack (test)</title><h1>Mock Paystack checkout — TEST ONLY</h1><p>Amount: ₦${(t.amount / 100).toLocaleString()}</p>
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      return res.end(`<!doctype html><meta charset="utf-8"><title>Mock Paystack (test)</title><h1>Mock Paystack checkout — TEST ONLY</h1><p>Amount: ₦${(t.amount / 100).toLocaleString()}</p>
         <form method="post" action="/checkout/${encodeURIComponent(t.reference)}/pay"><button id="pay">Pay (test success)</button></form>
         <form method="post" action="/checkout/${encodeURIComponent(t.reference)}/fail"><button id="fail">Decline (test failure)</button></form>`);
     }

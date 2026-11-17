@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { lookup, type LookupState } from "./actions";
 
 export function TrackForm() {
@@ -15,7 +15,7 @@ export function TrackForm() {
           <ul style={{ margin: 0, paddingLeft: 18 }}>{mine.map((m) => <li key={m.n}><Link href={`/orders/${m.n}?t=${encodeURIComponent(m.t)}`}>{m.n}</Link></li>)}</ul>
         </div>
       )}
-      <form action={action} className="panel form" noValidate>
+      <form className="panel form" noValidate onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); startTransition(() => action(fd)); }}>
         <h2 style={{ fontSize: 20 }}>Look up an order</h2>
         <div className="fg2">
           <div className="f"><label htmlFor="t-number">Order number</label><input id="t-number" name="number" type="text" placeholder="LLH-AB3CD7E" autoCapitalize="characters" required /></div>

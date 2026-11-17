@@ -165,7 +165,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
               {o.giftNote && <div><dt className="hint">Hidden candle message</dt><dd style={{ margin: 0 }}>{letters ? o.giftNote : "(visible to writers)"}</dd></div>}
               {o.photoBeforeDispatch && <div><dt className="hint">Photo</dt><dd style={{ margin: 0 }}><strong>Send the buyer a photo before dispatch</strong></dd></div>}
               <div><dt className="hint">Source</dt><dd style={{ margin: 0 }}>{o.source?.source ?? "—"}{o.source?.campaign ? ` / ${o.source.campaign}` : ""}</dd></div>
-              <div><dt className="hint">Customer link</dt><dd style={{ margin: 0, wordBreak: "break-all" }}><a href={trackUrl} target="_blank" rel="noopener noreferrer">Open buyer&apos;s order page</a></dd></div>
+              {pii && <div><dt className="hint">Customer link</dt><dd style={{ margin: 0, wordBreak: "break-all" }}><a href={trackUrl} target="_blank" rel="noopener noreferrer">Open buyer&apos;s order page</a></dd></div>}
             </dl>
           </section>
 
