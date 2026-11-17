@@ -1,0 +1,9 @@
+# Replace with your domain. Caddy obtains and renews HTTPS certificates automatically.
+loveliveshere.ng, www.loveliveshere.ng {
+  @www host www.loveliveshere.ng
+  redir @www https://loveliveshere.ng{uri} permanent
+  encode zstd gzip
+  reverse_proxy app:3000 {
+    header_up X-Forwarded-For {remote_host}
+  }
+}

@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import "./globals.css";
 import { appUrl } from "@/lib/config";
 
-const bodoni = Bodoni_Moda({ subsets: ["latin"], weight: ["400", "500"], style: ["normal", "italic"], variable: "--font-bodoni", display: "swap" });
+const bodoni = Bodoni_Moda({ subsets: ["latin"], weight: ["400", "500"], style: ["normal", "italic"], variable: "--font-bodoni", display: "swap", preload: false, adjustFontFallback: true });
 const karla = Karla({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-karla", display: "swap" });
 const caveat = Caveat({ subsets: ["latin"], weight: ["500"], variable: "--font-caveat", display: "swap", preload: false });
 

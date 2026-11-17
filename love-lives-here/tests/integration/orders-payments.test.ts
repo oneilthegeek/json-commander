@@ -304,3 +304,22 @@ describe("rate limiting", () => {
     process.env.RATE_LIMIT_DISABLED = prev;
   });
 });
+
+describe("data retention (NDPA)", () => {
+  it("removes letter content and contact details after the retention date, keeps the financial record", async () => {
+    const { runRetention } = await import("../../scripts/retention");
+    const { order } = await createOrder(await checkoutInput());
+    const staff = await makeStaff("retain@example.com");
+    await recordManualPayment(order.id, "Bank transfer ref 999", { id: staff, email: "retain@example.com" });
+    await getDb().update(schema.orders).set({ status: "delivered", retainUntil: "2020-01-01" }).where(eq(schema.orders.id, order.id));
+    expect((await runRetention({ dryRun: true })).numbers).toContain(order.number);
+    await runRetention();
+    const o = await getDb().query.orders.findFirst({ where: eq(schema.orders.id, order.id), with: { briefs: true, payments: true } });
+    expect(o!.briefs).toHaveLength(0);
+    expect(o!.deliveryAddress).toBeNull();
+    expect(o!.buyerEmail).toBeNull();
+    expect(o!.anonymisedAt).not.toBeNull();
+    expect(o!.total).toBe(order.total);
+    expect(o!.payments[0].status).toBe("success");
+  });
+});

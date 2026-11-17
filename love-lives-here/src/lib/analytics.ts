@@ -8,7 +8,7 @@ import { getDb, schema, type Tx } from "./db";
 export const CLIENT_EVENTS = [
   "page_view", "product_view", "variant_select", "add_to_cart", "remove_from_cart",
   "letter_start", "letter_complete", "checkout_start", "delivery_select",
-  "newsletter_signup_click", "whatsapp_click", "checkout_abandon",
+  "newsletter_signup_click", "whatsapp_click", "checkout_abandon", "web_vital",
 ] as const;
 export const SERVER_EVENTS = ["order_created", "payment_initiated", "purchase", "payment_failed", "newsletter_signup", "refund"] as const;
 export type EventName = (typeof CLIENT_EVENTS)[number] | (typeof SERVER_EVENTS)[number];

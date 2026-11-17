@@ -63,6 +63,17 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <div className="kpi"><b>{d.newsletter}</b><span>Newsletter sign-ups</span></div>
           <div className="kpi"><b>{d.whatsapp}</b><span>WhatsApp clicks</span></div>
         </div>
+        <section className="card" aria-labelledby="cwv-h">
+          <h2 id="cwv-h">Site speed for real visitors (75th percentile)</h2>
+          {Object.keys(d.vitals).length === 0 ? <p className="muted small">No measurements yet — these appear once real visitors use the live site.</p> : (
+            <div className="kpis">
+              {([["LCP", "Largest paint", 2500, (v: number) => `${(v / 1000).toFixed(2)} s`], ["INP", "Interaction delay", 200, (v: number) => `${Math.round(v)} ms`], ["CLS", "Layout shift", 100, (v: number) => (v / 1000).toFixed(3)]] as const).map(([k, label, goal, fmt]) => {
+                const v = d.vitals[k];
+                return <div className="kpi" key={k}><b className={v && v.p75 > goal ? "err" : ""}>{v ? fmt(v.p75) : "—"}</b><span>{label} · target ≤ {fmt(goal)} · {v?.samples ?? 0} samples</span></div>;
+              })}
+            </div>
+          )}
+        </section>
         <div className="cols">
           <section className="card" aria-labelledby="best-h">
             <h2 id="best-h">Best sellers</h2>

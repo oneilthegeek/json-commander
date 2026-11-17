@@ -50,7 +50,7 @@ const OPERATIONAL: OrderStatus[] = ["drafting", "awaiting_approval", "approved",
  * only verified payments (or an audited manual-payment record) set it.
  */
 export const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  awaiting_quote: ["pending_payment", "cancelled"],
+  awaiting_quote: ["cancelled"], // becomes payable only via the delivery-quote form (sets the fee)
   pending_payment: ["awaiting_quote", "cancelled"],
   paid: ["drafting", "in_production", "on_hold", "cancelled"],
   drafting: ["awaiting_approval", "in_production", "on_hold", "cancelled"],

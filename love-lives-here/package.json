@@ -18,10 +18,11 @@
     "images": "tsx scripts/extract-images.ts",
     "test": "vitest run",
     "test:e2e": "playwright test --trace off",
-    "mock:paystack": "tsx tests/mocks/paystack-server.ts"
+    "mock:paystack": "tsx tests/mocks/paystack-server.ts",
+    "retention": "tsx scripts/retention.ts"
   },
   "dependencies": {
-    "drizzle-orm": "0.44.7",
+    "drizzle-orm": "0.45.4",
     "libphonenumber-js": "1.13.16",
     "next": "15.5.29",
     "pg": "8.23.1",
@@ -40,9 +41,13 @@
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "drizzle-kit": "0.31.11",
-    "sharp": "0.34.5",
+    "sharp": "0.35.5",
     "tsx": "4.21.0",
     "typescript": "5.9.3",
-    "vitest": "3.2.7"
+    "vitest": "5.1.0"
+  },
+  "overrides": {
+    "sharp": "0.35.5",
+    "postcss": "8.5.33"
   }
 }

@@ -69,6 +69,11 @@ export async function dashboard(r: Range) {
       avg(extract(epoch from (o.delivered_at - o.paid_at)) / 3600) filter (where o.status = 'delivered') as avg_hours
     from orders o where ${inRange} and ${test}`)).rows;
 
+  const vitals = (await db.execute(sql`
+    select e.product as metric, percentile_cont(0.75) within group (order by e.value) as p75, count(*) as samples
+    from analytics_events e where e.name = 'web_vital' and e.value is not null and ${evRange}
+    group by e.product`)).rows as { metric: string; p75: number; samples: string }[];
+
   const gross = n(money.gross);
   const refunded = n(refunds.amount);
   const paid = n(orders.paid);
@@ -93,6 +98,7 @@ export async function dashboard(r: Range) {
     best: best.map((b) => ({ name: b.name, qty: b.qty, revenue: n(b.revenue) })),
     funnel: funnel.map((f) => ({ product: f.product, views: n(f.views), adds: n(f.adds) })),
     sources: sources.map((s) => ({ source: s.source, orders: n(s.orders), revenue: n(s.revenue) })),
+    vitals: Object.fromEntries(vitals.map((v) => [v.metric, { p75: n(v.p75), samples: n(v.samples) }])) as Record<string, { p75: number; samples: number }>,
     fulfilment: { delivered: n(fulfil.delivered), onTime: n(fulfil.on_time), overdue: n(fulfil.overdue), avgHours: fulfil.avg_hours == null ? null : Math.round(n(fulfil.avg_hours)) },
   };
 }
