@@ -1,4 +1,5 @@
 "use client";
+import { IMG_Q } from "@/lib/images";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/components/cart";
@@ -31,7 +32,7 @@ export default function CartPage() {
                   const bad = problems.some((e) => e.variantId === l.variantId);
                   return (
                     <li className="line" key={l.variantId}>
-                      <div className="thumb">{l.image && <Image src={l.image} alt="" fill sizes="72px" />}</div>
+                      <div className="thumb">{l.image && <Image quality={IMG_Q} src={l.image} alt="" fill sizes="72px" />}</div>
                       <div className="stack" style={{ gap: 6 }}>
                         <Link href={`/shop/${l.productSlug}`} style={{ fontWeight: 500 }}>{l.productName}</Link>
                         <span className="hint">{l.variantName}{p ? ` · ${formatNaira(p.unitPrice)} each` : ""}</span>

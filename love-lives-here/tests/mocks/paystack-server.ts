@@ -28,11 +28,14 @@ export function startMockPaystack(opts: { port: number; secret: string; webhookU
   const read = (req: IncomingMessage) => new Promise<string>((ok) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => ok(b)); });
   const authed = (req: IncomingMessage) => req.headers.authorization === `Bearer ${opts.secret}`;
 
+  let refundDelayMs = 0; // simulates a slow Paystack refund call (for race tests)
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", `http://127.0.0.1:${opts.port}`);
     const p = url.pathname;
     if (p.startsWith("/__control/")) {
       if (p === "/__control/state") return json(res, 200, { txns: [...txns.values()], webhooks });
+      const d = /^\/__control\/refund-delay\/(\d+)$/.exec(p);
+      if (d) { refundDelayMs = Number(d[1]); return json(res, 200, { ok: true }); }
       const m = /^\/__control\/tamper\/(.+)$/.exec(p);
       if (m && txns.has(m[1])) { txns.get(m[1])!.tamper = 100; return json(res, 200, { ok: true }); }
       const w = /^\/__control\/webhook\/(.+)$/.exec(p);
@@ -59,6 +62,7 @@ export function startMockPaystack(opts: { port: number; secret: string; webhookU
     if (req.method === "POST" && p === "/refund") {
       if (!authed(req)) return json(res, 401, { status: false, message: "Invalid key" });
       const b = JSON.parse(await read(req));
+      if (refundDelayMs) await new Promise((r) => setTimeout(r, refundDelayMs));
       const t = txns.get(b.transaction);
       if (!t || t.status !== "success") return json(res, 400, { status: false, message: "Transaction not found or not successful" });
       setTimeout(() => sendWebhook("refund.processed", { id: randomInt(1e9), transaction_reference: t.reference, amount: b.amount ?? t.amount, status: "processed" }), 150);

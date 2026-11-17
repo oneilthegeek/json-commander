@@ -4,7 +4,7 @@
  * Chat incoming webhook — a short message is also posted there.
  * Alerts never include customer personal data or letter content.
  */
-export type AlertKind =
+export type AlertKind = "refund_failed"
   | "server_error" | "payment_mismatch" | "duplicate_payment" | "payment_after_close"
   | "webhook_failed" | "email_send_failed" | "stock_short";
 

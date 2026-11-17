@@ -229,7 +229,15 @@ export async function saveVariant(variantId: string, _p: ActionResult, fd: FormD
     patch.name = str(fd, "name", 80) || v.name;
     patch.active = fd.get("active") === "on";
   }
-  await db.update(schema.productVariants).set(patch).where(eq(schema.productVariants.id, variantId));
+  // Optimistic concurrency: refuse to overwrite a price or stock level that changed since the form was opened
+  // (another staff member, or a paid order consuming stock). Prevents lost updates.
+  const was = (k: string) => { const x = str(fd, k, 20); return x === "" ? null : Number(x); };
+  if (!fd.has("stockWas") || !fd.has("priceWas")) return { error: "This form is out of date. Reload the page and try again." };
+  const conds = [eq(schema.productVariants.id, variantId)];
+  if (canStock) conds.push(sql`${schema.productVariants.stock} is not distinct from ${was("stockWas")}`);
+  if (canPrice) conds.push(sql`${schema.productVariants.price} is not distinct from ${was("priceWas")}`);
+  const upd = await db.update(schema.productVariants).set(patch).where(and(...conds)).returning({ id: schema.productVariants.id });
+  if (!upd.length) return { error: "Someone else changed this option (or an order used some stock) since you opened the page. Reload to see the latest values, then save again." };
   await log(s, "variant.update", "variant", variantId, { before: { price: v.price, status: v.priceStatus, stock: v.stock }, after: patch });
   revalidatePath("/admin/products");
   return { ok: true, message: "Saved." };
@@ -241,18 +249,22 @@ export async function saveProduct(productId: string, _p: ActionResult, fd: FormD
     if (name.length < 2) return { error: "Name is required." };
     const pd = Number(str(fd, "productionDays", 3));
     if (!Number.isInteger(pd) || pd < 0 || pd > 60) return { error: "Production days must be 0–60." };
-    await getDb().update(schema.products).set({
+    const seen = str(fd, "updatedAtWas", 40);
+    if (!seen) return { error: "This form is out of date. Reload the page and try again." };
+    const upd = await getDb().update(schema.products).set({
       name, tagline: str(fd, "tagline", 200), description: str(fd, "description", 4000), badge: str(fd, "badge", 40) || null,
       productionDays: pd, active: fd.get("active") === "on", featured: fd.get("featured") === "on", standalone: fd.get("standalone") === "on",
       requiresApproval: fd.get("requiresApproval") === "on", seoTitle: str(fd, "seoTitle", 120) || null, seoDescription: str(fd, "seoDescription", 300) || null,
       updatedAt: new Date(),
-    }).where(eq(schema.products.id, productId));
+    }).where(and(eq(schema.products.id, productId), sql`date_trunc('milliseconds', ${schema.products.updatedAt}) = ${seen}::timestamptz`)).returning({ id: schema.products.id });
+    if (!upd.length) return { error: "Someone else saved this product since you opened it. Reload to see their changes, then make yours again." };
     for (const [k, v] of fd.entries()) {
       const m = /^alt-(\d+)$/.exec(k);
       if (m) await getDb().update(schema.productImages).set({ alt: String(v).slice(0, 200) }).where(and(eq(schema.productImages.id, Number(m[1])), eq(schema.productImages.productId, productId)));
     }
     await log(s, "product.update", "product", productId);
     revalidatePath("/admin/products");
+    revalidatePath(`/admin/products/${productId}`);
     return { ok: true, message: "Product saved." };
   }) as Promise<ActionResult>;
 }
@@ -306,7 +318,12 @@ export async function saveZone(zoneId: number | null, _p: ActionResult, fd: Form
     if (!Number.isInteger(transitDays) || transitDays < 0 || transitDays > 30) return { error: "Transit days must be 0–30." };
     const values = { name, areas: str(fd, "areas", 300), mode, fee: mode === "fixed" ? fee : null, transitDays, region: str(fd, "region", 40) || "lagos", active: fd.get("active") === "on", sort: Number(str(fd, "sort", 4) || 0) || 0 };
     const db = getDb();
-    if (zoneId) await db.update(schema.deliveryZones).set(values).where(eq(schema.deliveryZones.id, zoneId));
+    if (zoneId) {
+      if (!fd.has("feeWas") || !fd.has("modeWas")) return { error: "This form is out of date. Reload the page and try again." };
+      const feeWas = str(fd, "feeWas", 20);
+      const upd = await db.update(schema.deliveryZones).set(values).where(and(eq(schema.deliveryZones.id, zoneId), eq(schema.deliveryZones.mode, str(fd, "modeWas") as "fixed"), sql`${schema.deliveryZones.fee} is not distinct from ${feeWas === "" ? null : Number(feeWas)}`)).returning({ id: schema.deliveryZones.id });
+      if (!upd.length) return { error: "Someone else changed this area's fee since you opened the page. Reload and try again." };
+    }
     else await db.insert(schema.deliveryZones).values(values);
     await log(s, zoneId ? "zone.update" : "zone.create", "zone", zoneId ? String(zoneId) : null, values);
     revalidatePath("/admin/delivery");

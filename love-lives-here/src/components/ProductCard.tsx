@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { IMG_Q } from "@/lib/images";
 import Link from "next/link";
 import { AddToBag } from "./AddToBag";
 import { TagArt } from "./TagArt";
@@ -9,7 +10,7 @@ export function ProductCard({ p, whatsapp, flower }: { p: ClientProduct; whatsap
     <article className={`prod${flower ? " flower" : ""}`} aria-labelledby={`h-${p.slug}`}>
       <Link className="pic" href={`/shop/${p.slug}`} tabIndex={-1} aria-hidden="true">
         {p.image ? (
-          <Image src={p.image.src} alt="" fill sizes="(min-width: 900px) 30vw, (min-width: 560px) 45vw, 90vw" />
+          <Image quality={IMG_Q} src={p.image.src} alt="" fill sizes="(min-width: 900px) 30vw, (min-width: 560px) 45vw, 90vw" />
         ) : p.kind === "llh_tag" ? <TagArt label="" /> : null}
         {p.badge && <span className={`tag${p.kind === "gold_card" ? " gold" : ""}`}>{p.badge}</span>}
       </Link>

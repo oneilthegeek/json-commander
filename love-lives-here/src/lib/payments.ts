@@ -4,6 +4,7 @@
  * reference. Processing is idempotent: callbacks, retries and duplicate
  * webhooks all converge on the same result.
  */
+import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import { getDb, schema } from "./db";
 import { appUrl, addEvent, OrderError, trackingUrl, verifyTracking } from "./orders";
@@ -90,9 +91,11 @@ export async function verifyAndApply(reference: string, via: "callback" | "webho
     const base = { channel: v.channel ?? null, gatewayResponse: v.gateway_response ?? null, providerTransactionId: String(v.id), testMode: v.domain === "test" };
 
     if (v.status === "success") {
-      if (v.reference !== reference || v.amount !== p.amount || v.currency !== "NGN") {
-        await tx.update(schema.payments).set({ ...base, status: "failed", gatewayResponse: `Mismatch: paid ${v.amount} ${v.currency}, expected ${p.amount} NGN` }).where(eq(schema.payments.id, p.id));
-        await addEvent(tx, { orderId: order.id, type: "payment_mismatch", message: `Paystack reported ${formatNaira(v.amount)} ${v.currency} for ${reference}; expected ${formatNaira(p.amount)}. Not marked paid — check and refund if needed.`, actorLabel: `system:${via}` });
+      // The paid amount must match both what we asked Paystack to charge and the order's current total
+      // (if staff changed the total after this payment was started, it must not silently count as full payment).
+      if (v.reference !== reference || v.amount !== p.amount || v.currency !== "NGN" || (order.paymentStatus === "unpaid" && order.total !== p.amount)) {
+        await tx.update(schema.payments).set({ ...base, status: "failed", gatewayResponse: `Mismatch: paid ${v.amount} ${v.currency}, expected ${order.total ?? p.amount} NGN` }).where(eq(schema.payments.id, p.id));
+        await addEvent(tx, { orderId: order.id, type: "payment_mismatch", message: `Paystack reported ${formatNaira(v.amount)} ${v.currency} for ${reference}; the order total is ${formatNaira(order.total ?? p.amount)}. Not marked paid — check and refund or collect the difference.`, actorLabel: `system:${via}` });
         return { outcome: "mismatch", orderNumber: order.number };
       }
       const alreadyApplied = p.status === "success";
@@ -159,7 +162,8 @@ export async function handleWebhook(raw: string): Promise<string> {
     if (event === "charge.success" && reference) {
       result = (await verifyAndApply(reference, "webhook")).outcome;
     } else if (event.startsWith("refund.") && reference) {
-      result = await applyRefundEvent(reference, String(data.status ?? event.split(".")[1]), Number(data.amount ?? 0));
+      result = await applyRefundEvent(reference, String(data.status ?? event.split(".")[1]), Number(data.amount ?? 0), data.id != null ? String(data.id) : null);
+      if (result === "refund_failed") await alert("refund_failed", "A Paystack refund failed.", reference);
     }
   } catch (e) {
     await alert("webhook_failed", `Paystack ${event} processing failed: ${(e as Error).message}`, reference ?? undefined);
@@ -171,15 +175,27 @@ export async function handleWebhook(raw: string): Promise<string> {
   return result;
 }
 
-async function applyRefundEvent(reference: string, status: string, amount: number): Promise<string> {
+async function applyRefundEvent(reference: string, status: string, amount: number, providerRefundId: string | null): Promise<string> {
   const db = getDb();
   return db.transaction(async (tx) => {
     const p = await tx.query.payments.findFirst({ where: eq(schema.payments.reference, reference) });
     if (!p) return "unknown_reference";
-    const refund = await tx.query.refunds.findFirst({ where: and(eq(schema.refunds.paymentId, p.id), sql`${schema.refunds.status} in ('pending','processing')`) });
+    await tx.execute(sql`select id from orders where id = ${p.orderId} for update`);
     const mapped = status === "processed" ? "processed" : status === "failed" ? "failed" : "processing";
-    if (refund) await tx.update(schema.refunds).set({ status: mapped }).where(eq(schema.refunds.id, refund.id));
-    if (mapped === "processed") await settleRefund(tx, p.orderId, refund?.amount ?? amount, "system:webhook");
+    // Match the refund we started (by Paystack's refund id, else the open one); a refund started in the
+    // Paystack dashboard has no row yet, so record it rather than mis-reporting the order.
+    let refund = providerRefundId ? await tx.query.refunds.findFirst({ where: and(eq(schema.refunds.paymentId, p.id), eq(schema.refunds.providerRefundId, providerRefundId)) }) : undefined;
+    refund ??= await tx.query.refunds.findFirst({ where: and(eq(schema.refunds.paymentId, p.id), sql`${schema.refunds.status} in ('pending','processing')`) });
+    if (!refund) {
+      if (!(amount > 0)) return "refund_ignored_no_amount";
+      [refund] = await tx.insert(schema.refunds).values({ orderId: p.orderId, paymentId: p.id, amount, reason: "Refund made in the Paystack dashboard", status: "processing", providerRefundId }).returning();
+      await addEvent(tx, { orderId: p.orderId, type: "refund_requested", message: `Paystack reported a refund of ${formatNaira(amount)} that wasn't started here (Paystack dashboard).`, actorLabel: "system:webhook" });
+    }
+    if (refund.status === mapped || refund.status === "manual") return `refund_${mapped}_unchanged`;
+    if (refund.status === "processed") return "refund_already_processed";
+    await tx.update(schema.refunds).set({ status: mapped, providerRefundId: refund.providerRefundId ?? providerRefundId }).where(eq(schema.refunds.id, refund.id));
+    if (mapped === "processed") await settleRefund(tx, p.orderId, refund.amount, "system:webhook");
+    if (mapped === "failed") await addEvent(tx, { orderId: p.orderId, type: "refund_failed", message: `Paystack could not complete the refund of ${formatNaira(refund.amount)}. Retry or refund manually.`, actorLabel: "system:webhook" });
     return `refund_${mapped}`;
   });
 }
@@ -200,26 +216,46 @@ async function settleRefund(tx: Parameters<Parameters<ReturnType<typeof getDb>["
 
 export async function refundOrder(orderId: string, amount: number, reason: string, actor: { id: string; email: string }, manual = false) {
   const db = getDb();
-  const order = await db.query.orders.findFirst({ where: eq(schema.orders.id, orderId), with: { payments: true, refunds: true } });
-  if (!order) throw new OrderError("Order not found", undefined, 404);
-  const paid = order.payments.filter((p) => p.status === "success");
-  const paidTotal = paid.reduce((s, p) => s + p.amount, 0);
-  const already = order.refunds.filter((r) => r.status !== "failed").reduce((s, r) => s + r.amount, 0);
   if (!Number.isInteger(amount) || amount <= 0) throw new OrderError("Enter a refund amount.");
-  if (amount > paidTotal - already) throw new OrderError(`You can refund at most ${formatNaira(paidTotal - already)}.`);
   if (reason.trim().length < 3) throw new OrderError("Give a reason for the refund.");
-  const payment = paid[paid.length - 1];
-
-  if (manual || payment?.provider === "manual") {
-    return db.transaction(async (tx) => {
-      await tx.insert(schema.refunds).values({ orderId, paymentId: payment?.id ?? null, amount, reason, status: "manual", createdBy: actor.id });
-      await settleRefund(tx, orderId, amount, actor.email);
-    });
+  // Step 1, under a row lock: check what's still refundable and reserve this refund, so two staff
+  // members (or a double click) can't both refund the same money.
+  const reserved = await db.transaction(async (tx) => {
+    await tx.execute(sql`select id from orders where id = ${orderId} for update`);
+    const order = await tx.query.orders.findFirst({ where: eq(schema.orders.id, orderId), with: { payments: true, refunds: true } });
+    if (!order) throw new OrderError("Order not found", undefined, 404);
+    const live = order.refunds.filter((r) => r.status !== "failed");
+    const paid = order.payments.filter((p) => p.status === "success").sort((a, b) => +a.createdAt - +b.createdAt);
+    const paidTotal = paid.reduce((s, p) => s + p.amount, 0);
+    const already = live.reduce((s, r) => s + r.amount, 0);
+    if (amount > paidTotal - already) throw new OrderError(paidTotal - already > 0 ? `You can refund at most ${formatNaira(paidTotal - already)}.` : "Nothing left to refund on this order.");
+    // A single Paystack refund can't exceed the transaction it refunds: pick the latest payment with room.
+    const left = (p: (typeof paid)[number]) => p.amount - live.filter((r) => r.paymentId === p.id).reduce((s, r) => s + r.amount, 0);
+    const payment = [...paid].reverse().find((p) => left(p) >= amount);
+    if (!payment) throw new OrderError(`Refund at most ${formatNaira(Math.max(0, ...paid.map(left)))} at a time (one payment per refund).`);
+    const isManual = manual || payment.provider === "manual";
+    const [row] = await tx.insert(schema.refunds).values({ orderId, paymentId: payment.id, amount, reason, status: isManual ? "manual" : "pending", createdBy: actor.id }).returning();
+    if (isManual) await settleRefund(tx, orderId, amount, actor.email);
+    else await addEvent(tx, { orderId, type: "refund_requested", message: `Refund of ${formatNaira(amount)} requested from Paystack: ${reason}`, actorId: actor.id, actorLabel: actor.email });
+    return { row, payment, isManual };
+  });
+  if (reserved.isManual) return;
+  // Step 2: ask Paystack. On failure the reservation is released (marked failed) so it can be retried.
+  let r: paystack.RefundData;
+  try {
+    r = await paystack.createRefund({ reference: reserved.payment.reference, amount, note: reason });
+  } catch (e) {
+    await db.update(schema.refunds).set({ status: "failed" }).where(eq(schema.refunds.id, reserved.row.id));
+    await addEvent(db, { orderId, type: "refund_failed", message: `Paystack refused the refund: ${(e as Error).message}`.slice(0, 300), actorId: actor.id, actorLabel: actor.email });
+    throw new OrderError(`Paystack didn't accept the refund: ${(e as Error).message}`, undefined, 502);
   }
-  const r = await paystack.createRefund({ reference: payment.reference, amount, note: reason });
   await db.transaction(async (tx) => {
-    await tx.insert(schema.refunds).values({ orderId, paymentId: payment.id, amount, reason, status: r.status === "processed" ? "processed" : "pending", providerRefundId: r.id ? String(r.id) : null, createdBy: actor.id });
-    await addEvent(tx, { orderId, type: "refund_requested", message: `Refund of ${formatNaira(amount)} requested from Paystack: ${reason}`, actorId: actor.id, actorLabel: actor.email });
+    await tx.execute(sql`select id from orders where id = ${orderId} for update`);
+    const cur = (await tx.query.refunds.findFirst({ where: eq(schema.refunds.id, reserved.row.id) }))!;
+    const providerRefundId = r.id ? String(r.id) : null;
+    // The refund.processed webhook may already have settled it while we waited.
+    if (cur.status === "processed") { await tx.update(schema.refunds).set({ providerRefundId }).where(eq(schema.refunds.id, cur.id)); return; }
+    await tx.update(schema.refunds).set({ status: r.status === "processed" ? "processed" : cur.status, providerRefundId }).where(eq(schema.refunds.id, cur.id));
     if (r.status === "processed") await settleRefund(tx, orderId, amount, actor.email);
   });
 }

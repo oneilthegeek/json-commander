@@ -12,6 +12,7 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 function ZoneFields({ z }: { z?: typeof schema.deliveryZones.$inferSelect }) {
   const k = z?.id ?? "new";
   return (<>
+    {z && <><input type="hidden" name="feeWas" value={z.fee ?? ""} /><input type="hidden" name="modeWas" value={z.mode} /></>}
     <div className="f" style={{ flex: "2 1 160px" }}><label htmlFor={`zn-${k}`}>Area name</label><input id={`zn-${k}`} name="name" type="text" defaultValue={z?.name} required /></div>
     <div className="f" style={{ flex: "2 1 160px" }}><label htmlFor={`za-${k}`}>Areas covered / note</label><input id={`za-${k}`} name="areas" type="text" defaultValue={z?.areas} /></div>
     <div className="f"><label htmlFor={`zm-${k}`}>Fee</label><select id={`zm-${k}`} name="mode" defaultValue={z?.mode ?? "fixed"}><option value="fixed">Fixed</option><option value="quote">We quote</option><option value="pickup">Pickup (free)</option></select></div>

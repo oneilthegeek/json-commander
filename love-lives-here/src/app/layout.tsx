@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", images: ["/images/og-love-lives-here.jpg"] },
   other: { "geo.region": "NG-LA", "geo.placename": "Lagos, Nigeria" },
   icons: { icon: "/icon.svg" },
+  // Google Search Console "HTML tag" verification (DNS TXT verification needs no code). Set the
+  // content value from Search Console in GOOGLE_SITE_VERIFICATION; nothing is emitted when unset.
+  ...(process.env.GOOGLE_SITE_VERIFICATION ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } } : {}),
 };
 
 export const viewport: Viewport = { themeColor: "#4A1220", width: "device-width", initialScale: 1 };

@@ -22,6 +22,7 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
       <p><Link href="/admin/products">← Products</Link></p>
       <h1 style={{ fontSize: 34 }}>{p.name}</h1>
       <ActionForm action={saveProduct.bind(null, p.id)} submit="Save product" className="card form">
+        <input type="hidden" name="updatedAtWas" value={p.updatedAt.toISOString()} />
         <div className="fg2">
           <div className="f"><label htmlFor="name">Name</label><input id="name" name="name" type="text" defaultValue={p.name} required /></div>
           <div className="f"><label htmlFor="badge">Badge</label><input id="badge" name="badge" type="text" defaultValue={p.badge ?? ""} placeholder="Most loved" /></div>

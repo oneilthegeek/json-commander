@@ -1,3 +1,4 @@
+import { ipFromHeaders } from "@/lib/client-ip";
 import "server-only";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -18,7 +19,7 @@ export type Staff = { id: string; email: string; name: string; role: Role; totpE
 export async function clientIp(): Promise<string> {
   const h = await headers();
   // Behind a single trusted proxy (Vercel, nginx, Fly). Configure the proxy to set this header.
-  return (h.get("x-forwarded-for")?.split(",")[0] ?? h.get("x-real-ip") ?? "unknown").trim().slice(0, 64);
+  return ipFromHeaders(h);
 }
 
 async function setCookie(token: string) {
@@ -40,8 +41,11 @@ export async function login(email: string, password: string): Promise<LoginResul
   if (!user || !user.active) return generic;
   if (user.lockedUntil && user.lockedUntil > new Date()) return { ok: false, error: "This account is temporarily locked after too many attempts. Try again later." };
   if (!valid) {
-    const fails = user.failedLogins + 1;
-    await db.update(schema.staffUsers).set({ failedLogins: fails, lockedUntil: fails >= 5 ? new Date(Date.now() + 15 * 60_000) : null }).where(eq(schema.staffUsers.id, user.id));
+    // Atomic increment: parallel wrong guesses can't undercount and dodge the lockout.
+    await db.update(schema.staffUsers).set({
+      failedLogins: sql`${schema.staffUsers.failedLogins} + 1`,
+      lockedUntil: sql`case when ${schema.staffUsers.failedLogins} + 1 >= 5 then now() + interval '15 minutes' else ${schema.staffUsers.lockedUntil} end`,
+    }).where(eq(schema.staffUsers.id, user.id));
     await audit({ actorId: user.id, actorEmail: user.email, action: "login_failed", entity: "staff", entityId: user.id, ip });
     return generic;
   }

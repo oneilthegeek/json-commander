@@ -1,3 +1,4 @@
+import { ipFromHeaders } from "@/lib/client-ip";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { headers } from "next/headers";
@@ -7,7 +8,7 @@ import { rateLimit } from "./rate-limit";
 
 export async function ip(): Promise<string> {
   const h = await headers();
-  return (h.get("x-forwarded-for")?.split(",")[0] ?? h.get("x-real-ip") ?? "unknown").trim().slice(0, 64);
+  return ipFromHeaders(h);
 }
 
 export async function limited(bucket: string, limit: number, windowSec: number) {
@@ -24,6 +25,9 @@ export async function readJson(req: Request, maxBytes = 64 * 1024): Promise<unkn
 export function errorResponse(e: unknown) {
   if (e instanceof ZodError) return NextResponse.json({ error: "Please check the highlighted fields.", fields: fieldErrors(e) }, { status: 422 });
   if (e instanceof OrderError) return NextResponse.json({ error: e.message, field: e.field }, { status: e.status });
-  console.error(e);
+  // Log only the error's type, code and message: database errors carry a `detail` field that can
+  // contain customer values (emails, phone numbers), which must not end up in logs.
+  const err = e as { name?: string; code?: string; message?: string; stack?: string };
+  console.error(JSON.stringify({ level: "error", name: err?.name, code: err?.code, message: String(err?.message ?? e).slice(0, 300), at: err?.stack?.split("\n")[1]?.trim() }));
   return NextResponse.json({ error: "Something went wrong on our side. Please try again." }, { status: 500 });
 }

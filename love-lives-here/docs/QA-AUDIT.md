@@ -1,5 +1,7 @@
 # Final QA and completion audit — 17 November 2026
 
+> Updated by the independent review of 18 Nov 2026: see `../INDEPENDENT_REVIEW.md` for current test counts, new defects found and fixed, and performance results.
+
 An independent pass over the actual code and the running production build, measured against the master specification. Earlier documents (`CHECKLIST.md`, `TEST-RESULTS.md`) are superseded where they differ from this one.
 
 ## Requirements traceability matrix

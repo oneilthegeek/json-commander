@@ -1,11 +1,15 @@
 /* Love Lives Here — brand system carried over from the original single-page site.
    One deliberate look (deep red, cream, gold), mobile-first, 1200px container. */
+/* Karla and Bodoni Moda have no ₦ glyph, so it has always been drawn by the phone's own font. Without
+   this rule browsers first download both fonts' 26 KB "latin-ext" files looking for it (₦ is inside
+   that range) and find nothing. Pointing ₦ straight at system fonts skips that wasted download. */
+@font-face { font-family: "LLH Naira"; src: local("Roboto"), local("Helvetica Neue"), local("Helvetica"), local("Arial"), local("Noto Sans"), local("Segoe UI"), local("DejaVu Sans"); unicode-range: U+20A6; }
 :root {
   --red: #4A1220; --cherry: #2A0C13; --wine: #7E1426; --cream: #FDF9F6; --card: #FFFDFB; --blush: #F6ECE7;
   --gold: #E2BE78; --on-dark: #FFF4EE; --on-dark-muted: #F0D2CF; --muted: #6E4B52; --line: #EADBD8; --line-2: #E0C8C4;
   --pill: #F2E4E1; --pill-hover: #ECD9D5; --ok: #1F6B45; --warn: #8A5A00;
-  --display: var(--font-bodoni), "Bodoni Moda", Georgia, "Times New Roman", serif;
-  --ui: var(--font-karla), Karla, "Helvetica Neue", Arial, sans-serif;
+  --display: "LLH Naira", var(--font-bodoni), "Bodoni Moda", Georgia, "Times New Roman", serif;
+  --ui: "LLH Naira", var(--font-karla), Karla, "Helvetica Neue", Arial, sans-serif;
   --hand: var(--font-caveat), Caveat, cursive;
   color-scheme: light;
 }
@@ -375,3 +379,4 @@ table.t { width: 100%; border-collapse: collapse; font-size: 14px; }
 .bar-row i { display: block; height: 10px; background: var(--wine); }
 pre.brief { white-space: pre-wrap; font: 15px/1.6 var(--ui); background: #F7EFEB; padding: 14px; margin: 0; overflow-wrap: anywhere; }
 @media print { .admin-top, .no-print, .wa-float, .site-head, .bar, footer.site-foot { display: none !important; } body { background: #fff; } }
+

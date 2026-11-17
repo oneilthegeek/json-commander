@@ -1,0 +1,42 @@
+# Lighthouse 13, mobile preset, production build on localhost:3000 (HTTP/1.1), same machine (benchmarkIndex ~2700-3000)
+# Simulated throttling (Lighthouse default). Columns: label page run perf LCP(ms) FCP(ms) TBT(ms) CLS KB
+## BEFORE (commit of 17 Nov, 3 runs)
+before / run 1 perf 95 LCP 2716 FCP 1693 TBT 40 CLS 0.003 KB 415
+before / run 2 perf 93 LCP 3123 FCP 1674 TBT 46 CLS 0.003 KB 415
+before / run 3 perf 95 LCP 2779 FCP 1676 TBT 56 CLS 0.003 KB 415
+before /shop/handwritten-letter run 1 perf 96 LCP 2670 FCP 1084 TBT 47 CLS 0.000 KB 463
+before /shop/handwritten-letter run 2 perf 94 LCP 2956 FCP 1509 TBT 37 CLS 0.000 KB 462
+before /shop/handwritten-letter run 3 perf 93 LCP 3157 FCP 1510 TBT 57 CLS 0.000 KB 463
+before /letter run 1 perf 96 LCP 2616 FCP 1361 TBT 71 CLS 0.004 KB 246
+before /letter run 2 perf 99 LCP 1076 FCP 776 TBT 102 CLS 0.004 KB 246
+before /letter run 3 perf 97 LCP 2587 FCP 1357 TBT 66 CLS 0.004 KB 246
+before /checkout run 1 perf 98 LCP 2297 FCP 1067 TBT 51 CLS 0.056 KB 216
+before /checkout run 2 perf 99 LCP 1890 FCP 1066 TBT 61 CLS 0.056 KB 217
+before /checkout run 3 perf 98 LCP 2022 FCP 1066 TBT 78 CLS 0.056 KB 216
+## AFTER (this review, 5 runs)
+after / run 1 perf 96 LCP 2746 FCP 1367 TBT 35 CLS 0.003 KB 322
+after / run 2 perf 95 LCP 2873 FCP 1367 TBT 37 CLS 0.003 KB 323
+after / run 3 perf 96 LCP 2760 FCP 1371 TBT 20 CLS 0.003 KB 323
+after / run 4 perf 95 LCP 2883 FCP 1361 TBT 45 CLS 0.003 KB 322
+after / run 5 perf 95 LCP 2870 FCP 1368 TBT 34 CLS 0.003 KB 323
+after /shop/handwritten-letter run 1 perf 98 LCP 2375 FCP 1210 TBT 33 CLS 0.000 KB 342
+after /shop/handwritten-letter run 2 perf 97 LCP 2528 FCP 1213 TBT 50 CLS 0.000 KB 342
+after /shop/handwritten-letter run 3 perf 99 LCP 2129 FCP 1070 TBT 33 CLS 0.000 KB 342
+after /shop/handwritten-letter run 4 perf 98 LCP 2377 FCP 1070 TBT 37 CLS 0.000 KB 344
+after /shop/handwritten-letter run 5 perf 95 LCP 2936 FCP 1216 TBT 35 CLS 0.000 KB 344
+after /letter run 1 perf 97 LCP 2450 FCP 1372 TBT 65 CLS 0.004 KB 234
+after /letter run 2 perf 97 LCP 2432 FCP 1364 TBT 66 CLS 0.004 KB 234
+after /letter run 3 perf 98 LCP 2111 FCP 1367 TBT 71 CLS 0.004 KB 235
+after /letter run 4 perf 99 LCP 2014 FCP 1362 TBT 51 CLS 0.004 KB 234
+after /letter run 5 perf 97 LCP 2443 FCP 1212 TBT 79 CLS 0.004 KB 234
+after /checkout run 1 perf 97 LCP 2315 FCP 1067 TBT 77 CLS 0.056 KB 217
+after /checkout run 2 perf 98 LCP 1874 FCP 1073 TBT 93 CLS 0.056 KB 216
+after /checkout run 3 perf 99 LCP 2018 FCP 1064 TBT 63 CLS 0.056 KB 217
+after /checkout run 4 perf 98 LCP 2025 FCP 1065 TBT 73 CLS 0.056 KB 217
+after /checkout run 5 perf 97 LCP 2277 FCP 1076 TBT 65 CLS 0.056 KB 217
+## Experiment: content-visibility on home (reverted, no gain)
+cv / run 1 perf 97 LCP 2477 FCP 1529 TBT 35 CLS 0.003 KB 323
+cv / run 2 perf 97 LCP 2454 FCP 1513 TBT 36 CLS 0.003 KB 322
+cv / run 3 perf 95 LCP 2847 FCP 1514 TBT 34 CLS 0.000 KB 323
+cv / run 4 perf 95 LCP 2887 FCP 1510 TBT 43 CLS 0.003 KB 323
+cv / run 5 perf 95 LCP 2779 FCP 1364 TBT 49 CLS 0.003 KB 323

@@ -3,6 +3,7 @@
  * https://paystack.com/docs/api/transaction/ and /docs/payments/webhooks/.
  * The secret key never leaves the server and is never logged.
  */
+import "server-only";
 import { createHmac } from "node:crypto";
 import { safeEqual } from "./tokens";
 

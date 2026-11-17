@@ -197,7 +197,7 @@ describe("Paystack payments (sandbox contract via local mock)", () => {
     expect(o!.paymentStatus).toBe("refunded");
     expect(o!.status).toBe("refunded");
     expect(o!.refunds[0].status).toBe("processed");
-    await expect(refundOrder(order.id, 100, "again", { id: staff, email: "refund@example.com" })).rejects.toThrow(/at most/);
+    await expect(refundOrder(order.id, 100, "again", { id: staff, email: "refund@example.com" })).rejects.toThrow(/at most|Nothing left/);
   });
 
   it("webhook signatures use the secret key (HMAC-SHA512)", () => {

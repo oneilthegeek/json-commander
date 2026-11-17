@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { IMG_Q } from "@/lib/images";
 import Image from "next/image";
 import { getProduct } from "@/lib/catalog";
 import { toClient } from "@/lib/present";
@@ -19,7 +20,7 @@ export default async function GoldCard() {
     <>
       <section className="sec dark" aria-labelledby="gc-h">
         <div className="box tag-in">
-          <figure className="tagshow"><Image src="/images/llh-gold-card-nfc.jpg" alt="The Love Lives Here Gold Card, printed “A letter is waiting for you”" width={1000} height={631} priority sizes="(min-width: 900px) 40vw, 90vw" /></figure>
+          <figure className="tagshow"><Image quality={IMG_Q} src="/images/llh-gold-card-nfc.jpg" alt="The Love Lives Here Gold Card, printed “A letter is waiting for you”" width={1000} height={631} priority sizes="(min-width: 900px) 40vw, 90vw" /></figure>
           <div className="tag-txt">
             <span className="lab">Only at LLH</span>
             <h1 id="gc-h" style={{ fontSize: "clamp(34px,5vw,56px)" }}>A letter that keeps talking after it&apos;s <i>opened.</i></h1>

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { IMG_Q } from "@/lib/images";
 import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
 import { listProducts } from "@/lib/catalog";
@@ -61,7 +62,7 @@ export default async function Home() {
             </div>
           </div>
           <div className="hero-art">
-            <Image src="/images/hand-holding-wax-sealed-love-letters.jpg" alt="A hand holding two kraft envelopes sealed with burgundy LLH wax seals" fill priority fetchPriority="high" sizes="(min-width: 900px) 50vw, 100vw" />
+            <Image quality={IMG_Q} src="/images/hand-holding-wax-sealed-love-letters.jpg" alt="A hand holding two kraft envelopes sealed with burgundy LLH wax seals" fill priority fetchPriority="high" sizes="(min-width: 900px) 50vw, 100vw" />
           </div>
         </div>
       </section>
@@ -76,7 +77,7 @@ export default async function Home() {
         <section className="feature-band" aria-labelledby="letter-h">
           <div className="box feature">
             <div className="pic">
-              {letter.images[0] && <Image src={letter.images[0].src} alt={letter.images[0].alt} fill sizes="(min-width: 900px) 45vw, 92vw" />}
+              {letter.images[0] && <Image quality={IMG_Q} src={letter.images[0].src} alt={letter.images[0].alt} fill sizes="(min-width: 900px) 45vw, 92vw" />}
               {letter.badge && <span className="tag">{letter.badge}</span>}
             </div>
             <div className="stack" style={{ gap: 18 }}>
@@ -120,7 +121,7 @@ export default async function Home() {
       <section className="sec dark" id="tag" aria-labelledby="gc-h">
         <div className="box tag-in">
           <figure className="tagshow">
-            <Image src="/images/llh-gold-card-nfc.jpg" alt="The Love Lives Here Gold Card, printed “A letter is waiting for you”" width={1000} height={631} sizes="(min-width: 900px) 40vw, 90vw" />
+            <Image quality={IMG_Q} src="/images/llh-gold-card-nfc.jpg" alt="The Love Lives Here Gold Card, printed “A letter is waiting for you”" width={1000} height={631} sizes="(min-width: 900px) 40vw, 90vw" />
           </figure>
           <div className="tag-txt">
             <span className="lab">The Gold Card</span>

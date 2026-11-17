@@ -1,5 +1,6 @@
 import { desc } from "drizzle-orm";
 import { requireStaff } from "@/lib/auth/session";
+import { can } from "@/lib/auth/permissions";
 import { getDb, schema } from "@/lib/db";
 import { formatDateTime } from "@/lib/dates";
 import { ActionForm } from "@/components/ActionForm";
@@ -8,7 +9,9 @@ import { closeMessage } from "../actions";
 export const metadata = { title: "Messages" };
 
 export default async function Messages() {
-  await requireStaff("messages.view");
+  const staff = await requireStaff("messages.view");
+  // Writers handle letters, not customer contact details: only roles with customers.pii see phone/email.
+  const showContact = can(staff.role, "customers.pii");
   const rows = await getDb().select().from(schema.supportMessages).orderBy(desc(schema.supportMessages.createdAt)).limit(200);
   return (
     <div className="stack" style={{ gap: 18 }}>
@@ -16,7 +19,7 @@ export default async function Messages() {
       {rows.length === 0 && <p className="muted">No messages yet.</p>}
       {rows.map((m) => (
         <article key={m.id} className="card">
-          <div className="row between"><strong>{m.name} · {m.contact}</strong><span className={`badge ${m.status === "open" ? "warn" : "ok"}`}>{m.status}</span></div>
+          <div className="row between"><strong>{m.name} · {showContact ? m.contact : <span className="muted">contact hidden for your role</span>}</strong><span className={`badge ${m.status === "open" ? "warn" : "ok"}`}>{m.status}</span></div>
           <span className="hint">{formatDateTime(m.createdAt)}{m.orderNumber ? ` · ${m.orderNumber}` : ""}</span>
           <pre className="brief">{m.message}</pre>
           {m.status === "open" && <ActionForm action={async () => { "use server"; return closeMessage(m.id); }} submit="Mark handled" submitClass="btn btn-ghost btn-sm" />}

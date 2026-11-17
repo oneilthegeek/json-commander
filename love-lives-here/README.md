@@ -8,7 +8,8 @@ The Love Lives Here website (handwritten letters, Secret Candles, Gold Cards, LL
 | Read next | |
 |---|---|
 | `docs/AUDIT.md` | What the original site had, every defect found, and what changed |
-| `docs/QA-AUDIT.md` | **Final audit: traceability matrix, test results, readiness verdict** |
+| `INDEPENDENT_REVIEW.md` | **Start here to verify the project:** architecture, security design, payment lifecycle, exact test commands and results, known limitations, launch checklist |
+| `docs/QA-AUDIT.md` | Earlier audit (17 Nov): traceability matrix |
 | `docs/CHECKLIST.md` | Each requirement with its status, including what is still blocked |
 | `docs/TEST-RESULTS.md` | Test, Lighthouse, audit and backup results |
 | `docs/DEPLOYMENT.md` | Going live: server, Paystack, newsletter, email, backups, Search Console |

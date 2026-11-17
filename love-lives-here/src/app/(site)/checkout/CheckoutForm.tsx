@@ -16,7 +16,7 @@ function newKey() {
   return (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/[^A-Za-z0-9_-]/g, "");
 }
 
-export function CheckoutForm({ zones, privacyVersion }: { zones: Zone[]; privacyVersion: string }) {
+export function CheckoutForm({ zones }: { zones: Zone[]; privacyVersion?: string }) {
   const router = useRouter();
   const cart = useCart();
   const [f, setF] = useState({
@@ -237,7 +237,7 @@ export function CheckoutForm({ zones, privacyVersion }: { zones: Zone[]; privacy
           <label className="check"><input type="checkbox" checked={f.photo} onChange={set("photo")} /><span>Send me a photo before it goes out</span></label>
           <label className="check" id="f-consent">
             <input type="checkbox" checked={f.consent} onChange={set("consent")} {...a("consent")} />
-            <span>I&apos;ve read how Love Lives Here uses my and the recipient&apos;s details to make and deliver this order (<Link href="/privacy" target="_blank">privacy notice</Link>, version {privacyVersion}) and agree to the <Link href="/terms" target="_blank">terms</Link>. <span className="req">required</span></span>
+            <span>I&apos;ve read how Love Lives Here uses my and the recipient&apos;s details to make and deliver this order (<Link href="/privacy" target="_blank">privacy notice</Link>) and agree to the <Link href="/terms" target="_blank">terms</Link>. <span className="req">required</span></span>
           </label>
           {err("consent")}
           <label className="check"><input type="checkbox" checked={f.marketing} onChange={set("marketing")} /><span>Also send me Dear Lovers emails now and then (optional)</span></label>
@@ -261,6 +261,14 @@ export function CheckoutForm({ zones, privacyVersion }: { zones: Zone[]; privacy
         <p className="hint" style={{ margin: 0 }}>
           {zone?.mode === "quote" ? "You'll pay once we've confirmed the delivery fee." : "You'll pay on Paystack's secure page. We never see or store your card details."}
         </p>
+        <details className="hint next-steps">
+          <summary>What happens after I pay?</summary>
+          <ol style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+            <li>You get a receipt by email and a private link to track your order.</li>
+            <li>If there&apos;s a letter, we send you the words on WhatsApp to read first. Nothing is sealed until you approve.</li>
+            <li>We make it and deliver it on the date you chose. You can message us any time on WhatsApp.</li>
+          </ol>
+        </details>
         <Link href="/cart" className="small">Edit bag</Link>
       </aside>
     </form>

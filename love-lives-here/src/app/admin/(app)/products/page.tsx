@@ -32,6 +32,7 @@ export default async function Products() {
                   <tr key={v.id}>
                     <td colSpan={6} style={{ padding: 0 }}>
                       <ActionForm action={saveVariant.bind(null, v.id)} submit="Save" className="inline-form" submitClass="btn btn-ghost btn-sm">
+                        <input type="hidden" name="stockWas" value={v.stock ?? ""} /><input type="hidden" name="priceWas" value={v.price ?? ""} />
                         <div className="f" style={{ flex: "2 1 140px" }}><label htmlFor={`n-${v.id}`} className="sr-only">Option name</label><input id={`n-${v.id}`} name="name" type="text" defaultValue={v.name} disabled={!canPrice} /></div>
                         <div className="f"><label htmlFor={`pr-${v.id}`} className="sr-only">Price</label><input id={`pr-${v.id}`} name="price" type="text" inputMode="decimal" defaultValue={v.price != null ? String(v.price / 100) : ""} placeholder={typeof v.attributes?.sourcePlaceholder === "number" ? `old placeholder ${formatNaira(Number(v.attributes.sourcePlaceholder) * 100)}` : "—"} disabled={!canPrice} /></div>
                         <div className="f"><label htmlFor={`ps-${v.id}`} className="sr-only">Price status</label>

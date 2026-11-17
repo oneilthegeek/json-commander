@@ -30,7 +30,8 @@ export default async function Privacy() {
         <li><strong>To send Dear Lovers emails</strong> — your consent, which you can withdraw at any time.</li>
       </ul>
       <h2>Who sees it</h2>
-      <p>Only the LLH team members who need it: writers see your letter brief but not your address; packing and delivery staff see the address but not your letter brief. We share data only with services that help us run the shop: Paystack (payments), our hosting and database provider, our email provider, and our delivery rider (recipient name, address, optional phone, on the day). We never sell your data.</p>
+      <p>Only the LLH team members who need it: writers see your letter brief but not your address; packing and delivery staff see the address but not your letter brief. We share data only with services that help us run the shop: Paystack (payments), our hosting and database provider, our email provider, our newsletter provider (Substack or Mailchimp, and only if you choose to subscribe: your email address), and our delivery rider (recipient name, address, optional phone, on the day). We never sell your data.</p>
+      <p>We count visits and shop activity (pages viewed, items added, checkouts started) to improve the shop. These counts use no cookies and contain no names, emails, phone numbers or addresses.</p>
       <h2>Transfers outside Nigeria</h2>
       <p>Some providers (for example hosting or email) may store data outside Nigeria. Where they do, we rely on safeguards permitted by the NDPA, such as contractual protections, and choose providers with strong security.</p>
       <h2>How long we keep it</h2>
